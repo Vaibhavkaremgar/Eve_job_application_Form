@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Job Application Form</title>
+        <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f2f5f9;
+        }
+
+        form {
+            width: 400px;
+            margin: 40px auto;
+            padding: 20px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0px 0px 10px gray;
+        }
+
+        h2 {
+            text-align: center;
+            color: #007BFF;
+        }
+
+        label {
+            font-weight: bold;
+            color: #333;
+        }
+
+        input[type="text"],
+        input[type="email"],
+        input[type="url"],
+        input[type="file"] {
+            width: 100%;
+            padding: 8px;
+            margin-top: 5px;
+            margin-bottom: 15px;
+            border: 1px solid #999;
+            border-radius: 5px;
+            box-sizing: border-box;
+        }
+
+        input:focus {
+            border-color: blue;
+            outline: none;
+            box-shadow: 0 0 5px lightblue;
+        }
+
+        input[type="submit"] {
+            width: 100%;
+            padding: 10px;
+            background: #007BFF;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 17px;
+            cursor: pointer;
+        }
+
+        input[type="submit"]:hover {
+            background: #0056b3;
+        }
+    </style>
+    </head>
+    <body>
+        <form id="applicationForm" action="/apply" method="POST" enctype="multipart/form-data">
+            <h2>Job Application Form</h2>
+         <label> Name*:</label>
+         <input type="text" name="name" pattern="^[a-zA-Z\s]+$" required><br><br>
+         <label>Email*:</label>
+         <input type="email" name="email" required><br><br>
+         <label>Mobile Number*:</label>
+         <input type="text" name="mobile_number" pattern="^\d{10}$" maxlength="10" required><br><br>
+         <label>LinkedIn URL:</label>
+         <input type="url" name="linkedin_url" id="linkedin_url"placeholder="https://www.linkedin.com/in/your-profile" pattern="https://(www\.)?linkedin\.com/.*"><br><br>
+         <label>Upload Resume*:</label>
+         <input type = "file" name = "resume" id = "resume" accept = ".pdf,.docx" required><br><br>
+         <label>Upload Cover Letter:</label>
+         <input type = "file" name = "cover_letter" id = "cover_letter" accept = ".pdf,.doc,.docx"><br><br>
+         <input type="submit" value="Submit">
+        </form>
+        <script>
+
+const nameField = document.querySelector('input[name="name"]');
+
+nameField.addEventListener("input", function () {
+    this.value = this.value.replace(/[^A-Za-z ]/g, "");
+});
+
+
+const mobile = document.querySelector('input[name="mobile_number"]');
+
+mobile.addEventListener("input", function () {
+    this.value = this.value.replace(/[^0-9]/g, "");
+    if (this.value.length > 10) {
+        this.value = this.value.slice(0, 10);
+    }
+});
+const form = document.getElementById("applicationForm");
+
+form.addEventListener("submit", async function (e) {
+
+    e.preventDefault();
+    
+
+    const formData = new FormData(form);
+
+    const response = await fetch("/apply", {
+        method: "POST",
+        body: formData
+    });
+
+    const result = await response.json();
+
+    if (result.success) {
+
+        alert(result.message);
+
+        form.reset();
+
+    } else {
+
+        alert("Failed to submit application.");
+
+    }
+
+});
+</script>
+    </body>
+</html>
