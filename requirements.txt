@@ -12,3 +12,4 @@ docx2python==3.5.0
 
 python-dotenv==1.1.1
 
+Jinja2
