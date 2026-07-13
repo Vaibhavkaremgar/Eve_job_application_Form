@@ -1,6 +1,7 @@
 from sqlalchemy import Column, String, Text, DateTime
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.sql import func
+from sqlalchemy import LargeBinary
 import uuid
 
 from .database import Base
@@ -19,7 +20,15 @@ class CandidateApplication(Base):
 
     linkedin_url = Column(Text, nullable=True)
 
-    resume_path = Column(Text, nullable=False)
+    job_role = Column(String, nullable=True)
+
+    # resume_path = Column(Text, nullable=False)
+
+    resume_data = Column(LargeBinary)
+
+    resume_filename = Column(String(255))
+
+    resume_content_type = Column(String(100))
 
     source = Column(String, default="Career Portal")
 
