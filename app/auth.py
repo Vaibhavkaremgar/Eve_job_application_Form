@@ -16,7 +16,7 @@ oauth.register(
 
 _serializer = URLSafeTimedSerializer(os.environ["SESSION_SECRET"])
 
-SESSION_COOKIE = "session"
+SESSION_COOKIE = "candidate_session"
 SESSION_MAX_AGE = 60 * 60 * 8  # 8 hours
 
 
@@ -36,7 +36,7 @@ def get_current_user(request: Request) -> str | None:
         user =  _serializer.loads(token, max_age=SESSION_MAX_AGE)
         print("Decoded User:", user)
         return user
-    except (BadSignature, SignatureExpired):
+    except Exception as e:
         print("Cookie Decode Error:", repr(e))
         return None
         
