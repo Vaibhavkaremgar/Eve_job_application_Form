@@ -13,3 +13,8 @@ docx2python==3.5.0
 python-dotenv==1.1.1
 
 Jinja2
+
+authlib==1.3.2
+httpx==0.28.1
+itsdangerous==2.2.0
+starlette==0.46.2

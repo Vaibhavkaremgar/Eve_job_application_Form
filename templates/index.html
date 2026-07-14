@@ -60,9 +60,21 @@
         input[type="submit"]:hover {
             background: #0056b3;
         }
+
+        .logout {
+            display: block;
+            text-align: right;
+            margin: 10px auto;
+            width: 400px;
+            font-size: 13px;
+            color: #888;
+        }
+        .logout a { color: #007BFF; text-decoration: none; }
+        .logout a:hover { text-decoration: underline; }
     </style>
     </head>
     <body>
+        <div class="logout"><a href="/auth/logout">Sign out</a></div>
         <form id="applicationForm" action="/apply" method="POST" enctype="multipart/form-data">
             <h2>Job Application Form</h2>
          <label> Name*:</label>

@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Sign In – Job Application Portal</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f2f5f9;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .card {
+            background: white;
+            padding: 40px 50px;
+            border-radius: 10px;
+            box-shadow: 0px 0px 10px gray;
+            text-align: center;
+            width: 340px;
+        }
+        h2 { color: #007BFF; margin-bottom: 8px; }
+        p  { color: #555; margin-bottom: 28px; font-size: 14px; }
+        .google-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            background: white;
+            border: 1px solid #dadce0;
+            border-radius: 6px;
+            padding: 10px 20px;
+            font-size: 15px;
+            font-weight: 500;
+            color: #3c4043;
+            text-decoration: none;
+            cursor: pointer;
+            transition: box-shadow 0.2s;
+        }
+        .google-btn:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
+        .google-btn img { width: 20px; height: 20px; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h2>Job Application Portal</h2>
+        <p>Sign in to access the application form.</p>
+        <a href="/auth/login" class="google-btn">
+            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google logo">
+            Sign in with Google
+        </a>
+    </div>
+</body>
+</html>
