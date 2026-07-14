@@ -26,6 +26,8 @@ def login_page(request: Request):
 
 @app.get("/", response_class=HTMLResponse)
 def home(request: Request):
+    print("Cookies:", request.cookies)
+    print("Current User:", get_current_user(request))
     if not get_current_user(request):
         return RedirectResponse("/login")
     return templates.TemplateResponse("index.html", {"request": request})

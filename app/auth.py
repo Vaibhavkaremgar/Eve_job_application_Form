@@ -61,14 +61,22 @@ async def auth_callback(request: Request):
         return RedirectResponse("/login")
 
     response = RedirectResponse("/")
+    # response.set_cookie(
+    #     key=SESSION_COOKIE,
+    #     value=create_session_cookie(user["email"]),
+    #     httponly=True,
+    #     secure=True,
+    #     samesite="lax",
+    #     max_age=SESSION_MAX_AGE,
+    # )
     response.set_cookie(
-        key=SESSION_COOKIE,
-        value=create_session_cookie(user["email"]),
-        httponly=True,
-        secure=True,
-        samesite="lax",
-        max_age=SESSION_MAX_AGE,
-    )
+    key=SESSION_COOKIE,
+    value=create_session_cookie(user["email"]),
+    httponly=True,
+    secure=False,      # TEMPORARY
+    samesite="lax",
+    max_age=SESSION_MAX_AGE,
+)
     return response
 
 
