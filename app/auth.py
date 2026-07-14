@@ -26,12 +26,20 @@ def create_session_cookie(email: str) -> str:
 
 def get_current_user(request: Request) -> str | None:
     token = request.cookies.get(SESSION_COOKIE)
+
+    print("Token:", token)
+    print("SESSION_SECRET:", os.environ.get("SESSION_SECRET"))
+
     if not token:
         return None
     try:
-        return _serializer.loads(token, max_age=SESSION_MAX_AGE)
+        user =  _serializer.loads(token, max_age=SESSION_MAX_AGE)
+        print("Decoded User:", user)
+        return user
     except (BadSignature, SignatureExpired):
+        print("Cookie Decode Error:", repr(e))
         return None
+        
 
 
 router = APIRouter()
