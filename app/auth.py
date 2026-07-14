@@ -44,7 +44,8 @@ router = APIRouter()
 
 @router.get("/auth/login")
 async def login(request: Request):
-    redirect_uri = str(request.url_for("auth_callback"))
+    # redirect_uri = str(request.url_for("auth_callback"))
+    redirect_uri = "https://eve.pontis.one/auth/callback"
     # print("Redirect URI:", redirect_uri)
     print("Request URL:", request.url)
     print("Base URL:", request.base_url)
