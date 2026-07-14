@@ -17,7 +17,7 @@ oauth.register(
 _serializer = URLSafeTimedSerializer(os.environ["SESSION_SECRET"])
 
 SESSION_COOKIE = "candidate_session"
-SESSION_MAX_AGE = 60 * 60 * 8  # 8 hours
+SESSION_MAX_AGE = 60 * 15  # 15 minutes
 
 
 def create_session_cookie(email: str) -> str:
@@ -26,19 +26,26 @@ def create_session_cookie(email: str) -> str:
 
 def get_current_user(request: Request) -> str | None:
     token = request.cookies.get(SESSION_COOKIE)
-
-    # print("Token:", token)
-    # print("SESSION_SECRET:", os.environ.get("SESSION_SECRET"))
-
     if not token:
         return None
     try:
-        user =  _serializer.loads(token, max_age=SESSION_MAX_AGE)
-        # print("Decoded User:", user)
-        return user
-    except Exception as e:
-        # print("Cookie Decode Error:", repr(e))
+        return _serializer.loads(token, max_age=SESSION_MAX_AGE)
+    except Exception:
         return None
+
+
+def is_session_expired(request: Request) -> bool:
+    """Returns True only when a cookie exists but the signature has expired."""
+    token = request.cookies.get(SESSION_COOKIE)
+    if not token:
+        return False
+    try:
+        _serializer.loads(token, max_age=SESSION_MAX_AGE)
+        return False
+    except SignatureExpired:
+        return True
+    except BadSignature:
+        return False
         
 
 

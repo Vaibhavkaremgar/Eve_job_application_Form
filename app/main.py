@@ -9,7 +9,7 @@ from starlette.middleware.sessions import SessionMiddleware
 from .models import CandidateApplication
 from .database import get_db
 from .crud import create_candidate_application
-from .auth import router as auth_router, get_current_user
+from .auth import router as auth_router, get_current_user, is_session_expired, SESSION_COOKIE
 
 app = FastAPI()
 
@@ -21,14 +21,20 @@ templates = Jinja2Templates(directory="templates")
 
 @app.get("/login", response_class=HTMLResponse)
 def login_page(request: Request):
-    return templates.TemplateResponse("login.html", {"request": request})
+    expired = is_session_expired(request)
+    resp = templates.TemplateResponse("login.html", {"request": request, "expired": expired})
+    if expired:
+        resp.delete_cookie(SESSION_COOKIE)
+    return resp
 
 
 @app.get("/", response_class=HTMLResponse)
 def home(request: Request):
-    print("Cookies:", request.cookies)
-    print("Current User:", get_current_user(request))
     if not get_current_user(request):
+        if is_session_expired(request):
+            redirect = RedirectResponse("/login")
+            redirect.delete_cookie(SESSION_COOKIE)
+            return redirect
         return RedirectResponse("/login")
     return templates.TemplateResponse("index.html", {"request": request})
 
