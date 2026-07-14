@@ -37,9 +37,18 @@ def get_current_user(request: Request) -> str | None:
 router = APIRouter()
 
 
+# @router.get("/auth/login")
+# async def login(request: Request):
+#     redirect_uri = str(request.url_for("auth_callback"))
+#     return await oauth.google.authorize_redirect(request, redirect_uri)
+
 @router.get("/auth/login")
 async def login(request: Request):
     redirect_uri = str(request.url_for("auth_callback"))
+    # print("Redirect URI:", redirect_uri)
+    print("Request URL:", request.url)
+    print("Base URL:", request.base_url)
+    print("Redirect URI:", redirect_uri)
     return await oauth.google.authorize_redirect(request, redirect_uri)
 
 
