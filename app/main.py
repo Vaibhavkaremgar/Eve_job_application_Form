@@ -1,15 +1,14 @@
 import os
-from fastapi import FastAPI, Request, UploadFile, File, Form, Depends
-from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
+import logging
+import httpx
+from fastapi import FastAPI, Request, UploadFile, File, Form
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
-from sqlalchemy.orm import Session
-from uuid import UUID
 from starlette.middleware.sessions import SessionMiddleware
 
-from .models import CandidateApplication
-from .database import get_db
-from .crud import create_candidate_application
 from .auth import router as auth_router, get_current_user, is_session_expired, SESSION_COOKIE
+
+logger = logging.getLogger(__name__)
 
 app = FastAPI()
 
@@ -17,6 +16,8 @@ app.add_middleware(SessionMiddleware, secret_key=os.environ["SESSION_SECRET"])
 app.include_router(auth_router)
 
 templates = Jinja2Templates(directory="templates")
+
+DASHBOARD_BASE_URL = os.environ["DASHBOARD_BASE_URL"]
 
 
 @app.get("/login", response_class=HTMLResponse)
@@ -39,53 +40,63 @@ def home(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
 
 
+ALLOWED_EXTENSIONS = {"pdf", "doc", "docx"}
+
+
+def _allowed(filename: str) -> bool:
+    return "." in filename and filename.rsplit(".", 1)[-1].lower() in ALLOWED_EXTENSIONS
+
+
 @app.post("/apply")
 async def apply(
     request: Request,
+    job_id: str = Form(...),
     name: str = Form(...),
-    email: str = Form(None),
-    mobile_number: str = Form(...),
+    email: str = Form(...),
+    phone: str = Form(...),
     linkedin_url: str = Form(None),
-    job_role: str = Form(...),
     resume: UploadFile = File(...),
-    db: Session = Depends(get_db),
+    cover_letter: UploadFile = File(None),
 ):
     if not get_current_user(request):
-        return JSONResponse(status_code=401, content={"success": False, "message": "Unauthorized"})
+        return JSONResponse(status_code=401, content={"detail": "Unauthorized"})
 
-    resume_data = await resume.read()
+    if not job_id or not job_id.strip():
+        return JSONResponse(status_code=400, content={"detail": "job_id is required"})
 
-    create_candidate_application(
-        db=db,
-        name=name,
-        email=email,
-        phone=mobile_number,
-        linkedin_url=linkedin_url,
-        job_role=job_role,
-        resume_data=resume_data,
-        resume_filename=resume.filename,
-        resume_content_type=resume.content_type,
+    if not _allowed(resume.filename):
+        return JSONResponse(status_code=400, content={"detail": "Resume must be a PDF or DOCX file."})
+    if cover_letter and cover_letter.filename and not _allowed(cover_letter.filename):
+        return JSONResponse(status_code=400, content={"detail": "Cover letter must be a PDF or DOCX file."})
+
+    logger.info(
+        "Forwarding application to Dashboard — job_id=%s email=%s name=%s",
+        job_id, email, name,
     )
 
-    return JSONResponse(
-        status_code=200,
-        content={"success": True, "message": "Application submitted successfully."}
-    )
+    files = {"resume": (resume.filename, await resume.read(), resume.content_type)}
+    if cover_letter and cover_letter.filename:
+        files["cover_letter"] = (cover_letter.filename, await cover_letter.read(), cover_letter.content_type)
 
+    data = {"job_id": job_id, "name": name, "email": email, "phone": phone}
+    if linkedin_url:
+        data["linkedin_url"] = linkedin_url
 
-@app.get("/candidate/{candidate_id}/resume")
-def get_resume(candidate_id: UUID, db: Session = Depends(get_db)):
-    candidate = (
-        db.query(CandidateApplication)
-        .filter(CandidateApplication.id == candidate_id)
-        .first()
-    )
-
-    if not candidate:
-        return JSONResponse(status_code=404, content={"message": "Candidate not found"})
-
-    return Response(
-        content=candidate.resume_data,
-        media_type=candidate.resume_content_type,
-        headers={"Content-Disposition": f'attachment; filename="{candidate.resume_filename}"'},
-    )
+    try:
+        async with httpx.AsyncClient(timeout=30) as client:
+            resp = await client.post(
+                f"{DASHBOARD_BASE_URL}/api/public/applications",
+                data=data,
+                files=files,
+            )
+        logger.info(
+            "Dashboard response — status=%s job_id=%s email=%s",
+            resp.status_code, job_id, email,
+        )
+        return JSONResponse(status_code=resp.status_code, content=resp.json())
+    except httpx.TimeoutException:
+        logger.exception("Dashboard request timed out — job_id=%s email=%s", job_id, email)
+        return JSONResponse(status_code=504, content={"detail": "Upstream service timed out."})
+    except httpx.RequestError:
+        logger.exception("Dashboard request failed — job_id=%s email=%s", job_id, email)
+        return JSONResponse(status_code=502, content={"detail": "Could not reach upstream service."})
