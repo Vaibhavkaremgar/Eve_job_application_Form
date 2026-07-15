@@ -39,6 +39,19 @@ def get_current_user(request: Request) -> str | None:
     except Exception as e:
         # print("Cookie Decode Error:", repr(e))
         return None
+
+
+def is_session_expired(request: Request) -> bool:
+    token = request.cookies.get(SESSION_COOKIE)
+    if not token:
+        return False
+    try:
+        _serializer.loads(token, max_age=SESSION_MAX_AGE)
+        return False
+    except SignatureExpired:
+        return True
+    except BadSignature:
+        return False
         
 
 
