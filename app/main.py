@@ -50,7 +50,7 @@ async def home(request: Request):
                 resp = await client.get(f"{DASHBOARD_BASE_URL}/api/public/jobs/{job_id}")
             if resp.status_code == 200:
                 data = resp.json()
-                job_title = data.get("title", "")
+                job_title = data.get("job_title", "")
                 company_name = data.get("company_name", "")
             elif resp.status_code in (404, 410):
                 job_error = "This job posting is no longer available."
