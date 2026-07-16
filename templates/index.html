@@ -77,12 +77,37 @@
         }
         .logout a { color: #007BFF; text-decoration: none; }
         .logout a:hover { text-decoration: underline; }
+
+        .error-box {
+            width: 400px;
+            margin: 80px auto;
+            padding: 30px 20px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0px 0px 10px gray;
+            text-align: center;
+            color: #555;
+        }
+        .error-box h2 { color: #dc3545; margin-bottom: 10px; }
     </style>
     </head>
     <body>
         <div class="logout"><a href="/auth/logout">Sign out</a></div>
+        {% if job_error %}
+        <div class="error-box">
+            <h2>Job Not Available</h2>
+            <p>{{ job_error }}</p>
+        </div>
+        {% else %}
         <form id="applicationForm" action="/apply" method="POST" enctype="multipart/form-data">
             <h2>Job Application Form</h2>
+         <label>Job ID:</label>
+         <input type="text" value="{{ job_id }}" readonly><br><br>
+         <label>Job Title:</label>
+         <input type="text" value="{{ job_title }}" readonly><br><br>
+         <label>Company Name:</label>
+         <input type="text" value="{{ company_name }}" readonly><br><br>
+         <input type="hidden" name="job_id" value="{{ job_id }}">
          <label> Name*:</label>
          <input type="text" name="name" pattern="^[a-zA-Z\s]+$" required><br><br>
          <label>Email*:</label>
@@ -91,17 +116,13 @@
          <input type="text" name="phone" pattern="^\d{10}$" maxlength="10" required><br><br>
          <label>LinkedIn URL:</label>
          <input type="url" name="linkedin_url" id="linkedin_url" required placeholder="https://www.linkedin.com/in/your-profile" pattern="https://(www\.)?linkedin\.com/.*"><br><br>
-         <label>Job ID:</label>
-         <input type="text" value="{{ job_id }}" readonly><br><br>
-         <label>Job Role:</label>
-         <input type="text" value="{{ job_title }}" readonly><br><br>
-         <input type="hidden" name="job_id" value="{{ job_id }}">
          <label>Upload Resume*:</label>
          <input type = "file" name = "resume" id = "resume" accept = ".pdf,.docx" required><br><br>
          <label>Upload Cover Letter:</label>
          <input type = "file" name = "cover_letter" id = "cover_letter" accept = ".pdf,.doc,.docx"><br><br>
          <input type="submit" value="Submit">
         </form>
+        {% endif %}
         <script>
 
 const nameField = document.querySelector('input[name="name"]');
@@ -111,7 +132,7 @@ nameField.addEventListener("input", function () {
 });
 
 
-const mobile = document.querySelector('input[name="mobile_number"]');
+const mobile = document.querySelector('input[name="phone"]');
 
 mobile.addEventListener("input", function () {
     this.value = this.value.replace(/[^0-9]/g, "");

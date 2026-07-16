@@ -42,15 +42,31 @@ async def home(request: Request):
         return RedirectResponse(login_url)
     job_id = request.query_params.get("job_id", "")
     job_title = ""
+    company_name = ""
+    job_error = None
     if job_id:
         try:
             async with httpx.AsyncClient(timeout=10) as client:
                 resp = await client.get(f"{DASHBOARD_BASE_URL}/api/public/jobs/{job_id}")
             if resp.status_code == 200:
-                job_title = resp.json().get("title", "")
+                data = resp.json()
+                job_title = data.get("title", "")
+                company_name = data.get("company_name", "")
+            elif resp.status_code in (404, 410):
+                job_error = "This job posting is no longer available."
+            else:
+                logger.warning("Unexpected status fetching job_id=%s: %s", job_id, resp.status_code)
         except httpx.RequestError:
             logger.warning("Could not fetch job details for job_id=%s", job_id)
-    return templates.TemplateResponse("index.html", {"request": request, "job_id": job_id, "job_title": job_title})
+    else:
+        job_error = "No job selected. Please use a valid job application link."
+    return templates.TemplateResponse("index.html", {
+        "request": request,
+        "job_id": job_id,
+        "job_title": job_title,
+        "company_name": company_name,
+        "job_error": job_error,
+    })
 
 
 ALLOWED_EXTENSIONS = {"pdf", "doc", "docx"}
