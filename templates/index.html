@@ -125,19 +125,32 @@ form.addEventListener("submit", async function (e) {
         body: formData
     });
 
+    // const result = await response.json();
+
+    // if (result.success) {
+
+    //     alert(result.message);
+
+    //     form.reset();
+
+    // } else {
+
+    //     alert("Failed to submit application.");
+
+    // }
     const result = await response.json();
 
-    if (result.success) {
+if (response.ok) {
 
-        alert(result.message);
+    alert(result.message);
 
-        form.reset();
+    form.reset();
 
-    } else {
+} else {
 
-        alert("Failed to submit application.");
+    alert(result.detail || "Submission failed.");
 
-    }
+}
 
 });
 </script>
