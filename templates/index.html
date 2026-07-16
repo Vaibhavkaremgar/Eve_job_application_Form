@@ -174,7 +174,7 @@ form.addEventListener("submit", async function (e) {
         const result = await response.json();
 
         if (response.ok) {
-            alert("Application submitted successfully.");
+            alert("Thank you! Your application has been received successfully. If you're shortlisted, we'll contact you with the next steps.");
             form.reset();
         } else {
             alert(result.detail || result.message || "Application submission failed.");
