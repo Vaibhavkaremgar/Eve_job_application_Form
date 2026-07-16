@@ -115,8 +115,7 @@
          <label>Mobile Number*:</label>
          <input type="text" name="phone" pattern="^\d{10}$" maxlength="10" required><br><br>
          <label>LinkedIn URL:</label>
-         <input type="url" name="linkedin_url" id="linkedin_url" required placeholder="https://www.linkedin.com/in/your-profile" pattern="https://(www\.)?linkedin\.com/.*">
-         <span id="linkedin_error" style="color:red;font-size:13px;display:none;">Please enter a valid LinkedIn profile URL starting with https://</span><br><br>
+         <input type="url" name="linkedin_url" id="linkedin_url" required placeholder="https://www.linkedin.com/in/your-profile"><br><br>
          <label>Upload Resume*:</label>
          <input type = "file" name = "resume" id = "resume" accept = ".pdf,.docx" required><br><br>
          <label>Upload Cover Letter:</label>
@@ -142,11 +141,18 @@ mobile.addEventListener("input", function () {
     }
 });
 const linkedinInput = document.getElementById("linkedin_url");
-const linkedinError = document.getElementById("linkedin_error");
 
-linkedinInput.addEventListener("input", function () {
-    if (this.value === "" || this.value.startsWith("https://")) {
-        linkedinError.style.display = "none";
+function validateLinkedin() {
+    const msg = linkedinInput.value && !linkedinInput.value.startsWith("https://")
+        ? "Please enter a valid LinkedIn profile URL starting with https://"
+        : "";
+    linkedinInput.setCustomValidity(msg);
+}
+
+linkedinInput.addEventListener("input", validateLinkedin);
+linkedinInput.addEventListener("invalid", function () {
+    if (this.value && !this.value.startsWith("https://")) {
+        this.setCustomValidity("Please enter a valid LinkedIn profile URL starting with https://");
     }
 });
 
@@ -156,9 +162,9 @@ form.addEventListener("submit", async function (e) {
 
     e.preventDefault();
 
-    if (!linkedinInput.value.startsWith("https://")) {
-        linkedinError.style.display = "inline";
-        linkedinInput.focus();
+    validateLinkedin();
+    if (!form.checkValidity()) {
+        form.reportValidity();
         return;
     }
     
