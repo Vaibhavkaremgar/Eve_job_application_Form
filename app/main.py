@@ -93,6 +93,9 @@ async def apply(
     if not job_id or not job_id.strip():
         return JSONResponse(status_code=400, content={"detail": "job_id is required"})
 
+    if linkedin_url and not linkedin_url.startswith("https://"):
+        return JSONResponse(status_code=400, content={"detail": "Please enter a valid LinkedIn profile URL starting with https://"})
+
     if not _allowed(resume.filename):
         return JSONResponse(status_code=400, content={"detail": "Resume must be a PDF or DOCX file."})
     if cover_letter and cover_letter.filename and not _allowed(cover_letter.filename):

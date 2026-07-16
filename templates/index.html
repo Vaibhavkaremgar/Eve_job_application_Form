@@ -115,7 +115,8 @@
          <label>Mobile Number*:</label>
          <input type="text" name="phone" pattern="^\d{10}$" maxlength="10" required><br><br>
          <label>LinkedIn URL:</label>
-         <input type="url" name="linkedin_url" id="linkedin_url" required placeholder="https://www.linkedin.com/in/your-profile" pattern="https://(www\.)?linkedin\.com/.*"><br><br>
+         <input type="url" name="linkedin_url" id="linkedin_url" required placeholder="https://www.linkedin.com/in/your-profile" pattern="https://(www\.)?linkedin\.com/.*">
+         <span id="linkedin_error" style="color:red;font-size:13px;display:none;">Please enter a valid LinkedIn profile URL starting with https://</span><br><br>
          <label>Upload Resume*:</label>
          <input type = "file" name = "resume" id = "resume" accept = ".pdf,.docx" required><br><br>
          <label>Upload Cover Letter:</label>
@@ -140,11 +141,26 @@ mobile.addEventListener("input", function () {
         this.value = this.value.slice(0, 10);
     }
 });
+const linkedinInput = document.getElementById("linkedin_url");
+const linkedinError = document.getElementById("linkedin_error");
+
+linkedinInput.addEventListener("input", function () {
+    if (this.value === "" || this.value.startsWith("https://")) {
+        linkedinError.style.display = "none";
+    }
+});
+
 const form = document.getElementById("applicationForm");
 
 form.addEventListener("submit", async function (e) {
 
     e.preventDefault();
+
+    if (!linkedinInput.value.startsWith("https://")) {
+        linkedinError.style.display = "inline";
+        linkedinInput.focus();
+        return;
+    }
     
 
     const formData = new FormData(form);
@@ -158,13 +174,13 @@ form.addEventListener("submit", async function (e) {
         const result = await response.json();
 
         if (response.ok) {
-            alert("Thank you! Your application has been received successfully. If you're shortlisted, we'll contact you with the next steps.");
+            alert("Application submitted successfully.");
             form.reset();
         } else {
-            alert(result.detail || result.message || "Application submission failed. Please try again.");
+            alert(result.detail || result.message || "Application submission failed.");
         }
     } catch {
-        alert("Application submission failed. Please try again.");
+        alert("Application submission failed.");
     }
 
 });
