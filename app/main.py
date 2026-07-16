@@ -32,12 +32,16 @@ def login_page(request: Request):
 @app.get("/", response_class=HTMLResponse)
 def home(request: Request):
     if not get_current_user(request):
+        job_id = request.query_params.get("job_id", "")
+        next_url = f"/?job_id={job_id}" if job_id else "/"
+        login_url = f"/login?next={next_url}" if job_id else "/login"
         if is_session_expired(request):
-            redirect = RedirectResponse("/login")
+            redirect = RedirectResponse(login_url)
             redirect.delete_cookie(SESSION_COOKIE)
             return redirect
-        return RedirectResponse("/login")
-    return templates.TemplateResponse("index.html", {"request": request})
+        return RedirectResponse(login_url)
+    job_id = request.query_params.get("job_id", "")
+    return templates.TemplateResponse("index.html", {"request": request, "job_id": job_id})
 
 
 ALLOWED_EXTENSIONS = {"pdf", "doc", "docx"}

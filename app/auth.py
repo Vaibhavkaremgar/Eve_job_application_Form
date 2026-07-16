@@ -65,12 +65,9 @@ router = APIRouter()
 
 @router.get("/auth/login")
 async def login(request: Request):
-    # redirect_uri = str(request.url_for("auth_callback"))
     redirect_uri = "https://eve.pontis.one/auth/callback"
-    # print("Redirect URI:", redirect_uri)
-    # print("Request URL:", request.url)
-    # print("Base URL:", request.base_url)
-    # print("Redirect URI:", redirect_uri)
+    next_url = request.query_params.get("next", "/")
+    request.session["next"] = next_url
     return await oauth.google.authorize_redirect(request, redirect_uri)
 
 
@@ -81,23 +78,16 @@ async def auth_callback(request: Request):
     if not user or not user.get("email"):
         return RedirectResponse("/login")
 
-    response = RedirectResponse("/")
-    # response.set_cookie(
-    #     key=SESSION_COOKIE,
-    #     value=create_session_cookie(user["email"]),
-    #     httponly=True,
-    #     secure=True,
-    #     samesite="lax",
-    #     max_age=SESSION_MAX_AGE,
-    # )
+    next_url = request.session.pop("next", "/")
+    response = RedirectResponse(next_url)
     response.set_cookie(
-    key=SESSION_COOKIE,
-    value=create_session_cookie(user["email"]),
-    httponly=True,
-    secure=False,      # TEMPORARY
-    samesite="lax",
-    max_age=SESSION_MAX_AGE,
-)
+        key=SESSION_COOKIE,
+        value=create_session_cookie(user["email"]),
+        httponly=True,
+        secure=False,      # TEMPORARY
+        samesite="lax",
+        max_age=SESSION_MAX_AGE,
+    )
     return response
 
 
