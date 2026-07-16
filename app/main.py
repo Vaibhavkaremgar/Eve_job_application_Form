@@ -30,7 +30,7 @@ def login_page(request: Request):
 
 
 @app.get("/", response_class=HTMLResponse)
-def home(request: Request):
+async def home(request: Request):
     if not get_current_user(request):
         job_id = request.query_params.get("job_id", "")
         next_url = f"/?job_id={job_id}" if job_id else "/"
@@ -41,7 +41,16 @@ def home(request: Request):
             return redirect
         return RedirectResponse(login_url)
     job_id = request.query_params.get("job_id", "")
-    return templates.TemplateResponse("index.html", {"request": request, "job_id": job_id})
+    job_title = ""
+    if job_id:
+        try:
+            async with httpx.AsyncClient(timeout=10) as client:
+                resp = await client.get(f"{DASHBOARD_BASE_URL}/api/public/jobs/{job_id}")
+            if resp.status_code == 200:
+                job_title = resp.json().get("title", "")
+        except httpx.RequestError:
+            logger.warning("Could not fetch job details for job_id=%s", job_id)
+    return templates.TemplateResponse("index.html", {"request": request, "job_id": job_id, "job_title": job_title})
 
 
 ALLOWED_EXTENSIONS = {"pdf", "doc", "docx"}

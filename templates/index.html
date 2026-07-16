@@ -46,6 +46,12 @@
             box-shadow: 0 0 5px lightblue;
         }
 
+        input[readonly] {
+            background-color: #e9ecef;
+            color: #555;
+            cursor: default;
+        }
+
         input[type="submit"] {
             width: 100%;
             padding: 10px;
@@ -85,9 +91,11 @@
          <input type="text" name="phone" pattern="^\d{10}$" maxlength="10" required><br><br>
          <label>LinkedIn URL:</label>
          <input type="url" name="linkedin_url" id="linkedin_url" required placeholder="https://www.linkedin.com/in/your-profile" pattern="https://(www\.)?linkedin\.com/.*"><br><br>
-         <label>Job Role*:</label>
-         <!-- <input type="text" name="job_role" required><br><br> -->
-        <input type="hidden" name="job_id" value="{{ job_id }}">
+         <label>Job ID:</label>
+         <input type="text" value="{{ job_id }}" readonly><br><br>
+         <label>Job Role:</label>
+         <input type="text" value="{{ job_title }}" readonly><br><br>
+         <input type="hidden" name="job_id" value="{{ job_id }}">
          <label>Upload Resume*:</label>
          <input type = "file" name = "resume" id = "resume" accept = ".pdf,.docx" required><br><br>
          <label>Upload Cover Letter:</label>
@@ -120,37 +128,23 @@ form.addEventListener("submit", async function (e) {
 
     const formData = new FormData(form);
 
-    const response = await fetch("/apply", {
-        method: "POST",
-        body: formData
-    });
+    try {
+        const response = await fetch("/apply", {
+            method: "POST",
+            body: formData
+        });
 
-    // const result = await response.json();
+        const result = await response.json();
 
-    // if (result.success) {
-
-    //     alert(result.message);
-
-    //     form.reset();
-
-    // } else {
-
-    //     alert("Failed to submit application.");
-
-    // }
-    const result = await response.json();
-
-if (response.ok) {
-
-    alert(result.message);
-
-    form.reset();
-
-} else {
-
-    alert(result.detail || "Submission failed.");
-
-}
+        if (response.ok) {
+            alert("Application submitted successfully.");
+            form.reset();
+        } else {
+            alert(result.detail || result.message || "Application submission failed. Please try again.");
+        }
+    } catch {
+        alert("Application submission failed. Please try again.");
+    }
 
 });
 </script>
