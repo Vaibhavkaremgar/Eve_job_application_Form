@@ -8,6 +8,47 @@ from starlette.middleware.sessions import SessionMiddleware
 
 from .auth import router as auth_router, get_current_user, is_session_expired, SESSION_COOKIE
 
+
+def _normalize(value: str | None) -> str:
+    """Strip whitespace and lowercase for case-insensitive comparison."""
+    return (value or "").strip().lower()
+
+
+def _is_duplicate(existing_applications: list[dict], name: str, email: str, phone: str, linkedin_url: str | None) -> bool:
+    """
+    Treat a new submission as a duplicate of an existing application when the
+    candidate appears to be the same person, even if one identifier changed.
+
+    Rules (all comparisons are case-insensitive and whitespace-trimmed):
+      - Same name + same email + same phone  → duplicate
+      - Same name + same phone (email differs) → duplicate
+      - Same name + same email (phone differs) → duplicate
+      - Same name + same LinkedIn URL (when present on both) → duplicate
+    """
+    n_name  = _normalize(name)
+    n_email = _normalize(email)
+    n_phone = _normalize(phone)
+    n_linkedin = _normalize(linkedin_url)
+
+    for app in existing_applications:
+        e_name     = _normalize(app.get("name"))
+        e_email    = _normalize(app.get("email"))
+        e_phone    = _normalize(app.get("phone"))
+        e_linkedin = _normalize(app.get("linkedin_url"))
+
+        if e_name != n_name:
+            continue  # Different person — skip
+
+        # Same name + same email OR same phone → same person
+        if e_email == n_email or e_phone == n_phone:
+            return True
+
+        # Same name + same LinkedIn URL (non-empty) → same person
+        if n_linkedin and e_linkedin and n_linkedin == e_linkedin:
+            return True
+
+    return False
+
 logger = logging.getLogger(__name__)
 
 app = FastAPI()
@@ -100,6 +141,23 @@ async def apply(
         return JSONResponse(status_code=400, content={"detail": "Resume must be a PDF or DOCX file."})
     if cover_letter and cover_letter.filename and not _allowed(cover_letter.filename):
         return JSONResponse(status_code=400, content={"detail": "Cover letter must be a PDF or DOCX file."})
+
+    # --- Duplicate detection: fetch existing applications for this job ---
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            dup_resp = await client.get(
+                f"{DASHBOARD_BASE_URL}/api/public/applications",
+                params={"job_id": job_id},
+            )
+        if dup_resp.status_code == 200:
+            existing = dup_resp.json() if isinstance(dup_resp.json(), list) else dup_resp.json().get("applications", [])
+            if _is_duplicate(existing, name, email, phone, linkedin_url):
+                return JSONResponse(status_code=409, content={"detail": "Application already exists."})
+        else:
+            logger.warning("Could not fetch existing applications for duplicate check — job_id=%s status=%s", job_id, dup_resp.status_code)
+    except httpx.RequestError:
+        logger.warning("Duplicate check request failed — job_id=%s, proceeding without check", job_id)
+    # --- End duplicate detection ---
 
     logger.info(
         "Forwarding application to Dashboard — job_id=%s email=%s name=%s",
