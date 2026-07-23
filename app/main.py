@@ -149,6 +149,10 @@ async def apply(
                 f"{DASHBOARD_BASE_URL}/api/public/applications",
                 params={"job_id": job_id},
             )
+
+            print("Duplicate GET Status:", dup_resp.status_code)
+            print("Duplicate GET Response:", dup_resp.text)
+            
         if dup_resp.status_code == 200:
             existing = dup_resp.json() if isinstance(dup_resp.json(), list) else dup_resp.json().get("applications", [])
             if _is_duplicate(existing, name, email, phone, linkedin_url):
