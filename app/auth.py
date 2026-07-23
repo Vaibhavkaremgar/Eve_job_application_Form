@@ -17,7 +17,8 @@ oauth.register(
 _serializer = URLSafeTimedSerializer(os.environ["SESSION_SECRET"])
 
 SESSION_COOKIE = "candidate_session"
-SESSION_MAX_AGE = 60 * 60 * 8  # 8 hours
+# SESSION_MAX_AGE = 60 * 60 * 8  # 8 hours
+SESSION_MAX_AGE = 60 * 15 #15 mins
 
 
 def create_session_cookie(email: str) -> str:
