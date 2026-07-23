@@ -19,6 +19,7 @@ _serializer = URLSafeTimedSerializer(os.environ["SESSION_SECRET"])
 SESSION_COOKIE = "candidate_session"
 # SESSION_MAX_AGE = 60 * 60 * 8  # 8 hours
 SESSION_MAX_AGE = 60 * 15 #15 mins
+#Now the page will auto logoff after 15 mins of inactivity. 
 
 
 def create_session_cookie(email: str) -> str:
