@@ -80,6 +80,9 @@ async def login(request: Request):
 
 @router.get("/auth/callback", name="auth_callback")
 async def auth_callback(request: Request):
+    print("CALLBACK - Cookies:", request.cookies)
+    print("CALLBACK - Session:", request.session)
+    print("CALLBACK - State:", request.query_params.get("state"))
     token = await oauth.google.authorize_access_token(request)
     user = token.get("userinfo")
     if not user or not user.get("email"):
