@@ -8,36 +8,9 @@
             position: relative;
             min-height: 100vh;
             margin: 0;
-            background: linear-gradient(180deg, #ffffff 0%, #f4f9ff 48%, #eaf4ff 100%);
+            background: #f6f9ff url("/static/background.png") center top / cover no-repeat fixed;
             overflow-x: hidden;
             isolation: isolate;
-        }
-
-        body::before,
-        body::after {
-            content: "";
-            position: fixed;
-            inset: 0;
-            pointer-events: none;
-            z-index: -1;
-        }
-
-        body::before {
-            background:
-                radial-gradient(circle at 14% 18%, rgba(91, 155, 213, 0.16) 0 11%, transparent 38%),
-                radial-gradient(circle at 82% 12%, rgba(96, 165, 250, 0.14) 0 9%, transparent 34%),
-                radial-gradient(circle at 78% 78%, rgba(59, 130, 246, 0.10) 0 12%, transparent 40%),
-                linear-gradient(180deg, rgba(255,255,255,0.40) 0%, rgba(255,255,255,0.04) 100%);
-            filter: blur(2px);
-            opacity: 0.95;
-        }
-
-        body::after {
-            background:
-                url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1600' height='1200' viewBox='0 0 1600 1200' fill='none'%3E%3Cg opacity='0.075' stroke='%231d4ed8' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M-40 300C120 220 240 220 360 300C480 380 600 380 720 300C840 220 960 220 1080 300C1200 380 1320 380 1640 260'/%3E%3Cpath d='M-60 560C120 470 250 470 380 560C510 650 640 650 770 560C900 470 1030 470 1160 560C1290 650 1420 650 1660 540'/%3E%3Cpath d='M-50 840C110 760 240 760 370 840C500 920 630 920 760 840C890 760 1020 760 1150 840C1280 920 1410 920 1650 810'/%3E%3Cpath d='M136 178h96v126h-96z'/%3E%3Cpath d='M176 178v-28h16v28'/%3E%3Cpath d='M160 220h40'/%3E%3Cpath d='M160 246h52'/%3E%3Cpath d='M332 150c18 0 32 14 32 32s-14 32-32 32-32-14-32-32 14-32 32-32z'/%3E%3Cpath d='M304 240c10-22 26-34 52-34s42 12 52 34'/%3E%3Cpath d='M292 258h84'/%3E%3Cpath d='M292 282h60'/%3E%3Cpath d='M292 306h72'/%3E%3Cpath d='M1080 186h118'/%3E%3Cpath d='M1098 186v-18h82v18'/%3E%3Cpath d='M1108 212h96'/%3E%3Cpath d='M1118 238h76'/%3E%3Cpath d='M1096 262h100'/%3E%3Cpath d='M1238 170c34 0 62 28 62 62s-28 62-62 62-62-28-62-62 28-62 62-62z'/%3E%3Cpath d='M1222 232l14 14 28-30'/%3E%3Cpath d='M1248 380l-48 50'/%3E%3Cpath d='M1258 390l42 42'/%3E%3Cpath d='M1204 440h88'/%3E%3Cpath d='M206 570h106'/%3E%3Cpath d='M206 600h146'/%3E%3Cpath d='M206 630h118'/%3E%3Cpath d='M206 660h92'/%3E%3Cpath d='M170 560c0-26 21-47 47-47s47 21 47 47-21 47-47 47-47-21-47-47z'/%3E%3Cpath d='M145 682c14-29 38-46 72-46s58 17 72 46'/%3E%3Cpath d='M610 510h120v138H610z'/%3E%3Cpath d='M610 510l60 56 60-56'/%3E%3Cpath d='M670 566v82'/%3E%3Cpath d='M636 598h68'/%3E%3Cpath d='M870 560h84'/%3E%3Cpath d='M862 560c0-34 28-62 62-62s62 28 62 62-28 62-62 62-62-28-62-62z'/%3E%3Cpath d='M906 560h72'/%3E%3Cpath d='M912 534l-14 26 16 6-12 28 34-34-16-6 10-20'/%3E%3Cpath d='M914 622l56 56'/%3E%3Cpath d='M942 614l0 96'/%3E%3Cpath d='M896 654h92'/%3E%3Cpath d='M1110 672h126'/%3E%3Cpath d='M1110 702h162'/%3E%3Cpath d='M1110 732h132'/%3E%3Cpath d='M1110 762h104'/%3E%3Cpath d='M1090 648c0-30 24-54 54-54s54 24 54 54-24 54-54 54-54-24-54-54z'/%3E%3Cpath d='M1056 780c16-31 42-50 88-50s72 19 88 50'/%3E%3Cpath d='M360 910h118'/%3E%3Cpath d='M360 940h172'/%3E%3Cpath d='M360 970h136'/%3E%3Cpath d='M330 900c0-28 23-51 51-51s51 23 51 51-23 51-51 51-51-23-51-51z'/%3E%3Cpath d='M300 1022c15-30 40-48 81-48s66 18 81 48'/%3E%3Cpath d='M948 920h112'/%3E%3Cpath d='M948 950h154'/%3E%3Cpath d='M948 980h126'/%3E%3Cpath d='M924 904c0-28 23-51 51-51s51 23 51 51-23 51-51 51-51-23-51-51z'/%3E%3Cpath d='M899 1028c13-27 36-43 76-43s63 16 76 43'/%3E%3Cpath d='M674 888c38 0 68 30 68 68s-30 68-68 68-68-30-68-68 30-68 68-68z'/%3E%3Cpath d='M638 956h72'/%3E%3Cpath d='M672 920v72'/%3E%3Cpath d='M704 936l38-38'/%3E%3Cpath d='M730 916h44'/%3E%3Cpath d='M740 928l34 34'/%3E%3C/g%3E%3Cg opacity='0.055' fill='%2360a5fa'%3E%3Cellipse cx='240' cy='180' rx='190' ry='36'/%3E%3Cellipse cx='1260' cy='250' rx='220' ry='44'/%3E%3Cellipse cx='820' cy='1020' rx='300' ry='54'/%3E%3C/g%3E%3C/svg%3E")
-                center/cover no-repeat;
-            filter: blur(0.2px);
-            mix-blend-mode: multiply;
         }
 
         form {

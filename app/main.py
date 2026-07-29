@@ -4,6 +4,7 @@ import httpx
 from fastapi import FastAPI, Request, UploadFile, File, Form
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
+from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
 
 from .auth import router as auth_router, get_current_user, is_session_expired, SESSION_COOKIE
@@ -55,6 +56,7 @@ app = FastAPI()
 
 app.add_middleware(SessionMiddleware, secret_key=os.environ["SESSION_SECRET"])
 app.include_router(auth_router)
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 templates = Jinja2Templates(directory="templates")
 
