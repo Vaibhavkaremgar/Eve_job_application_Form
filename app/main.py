@@ -1,5 +1,6 @@
 import os
 import logging
+from pathlib import Path
 import httpx
 from fastapi import FastAPI, Request, UploadFile, File, Form
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
@@ -53,12 +54,18 @@ def _is_duplicate(existing_applications: list[dict], name: str, email: str, phon
 logger = logging.getLogger(__name__)
 
 app = FastAPI()
+BASE_DIR = Path(__file__).resolve().parent.parent
+STATIC_DIR = BASE_DIR / "static"
+TEMPLATES_DIR = BASE_DIR / "templates"
 
 app.add_middleware(SessionMiddleware, secret_key=os.environ["SESSION_SECRET"])
 app.include_router(auth_router)
-app.mount("/static", StaticFiles(directory="static"), name="static")
+if STATIC_DIR.exists():
+    app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+else:
+    logger.warning("Static directory not found at %s; skipping /static mount.", STATIC_DIR)
 
-templates = Jinja2Templates(directory="templates")
+templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 
 DASHBOARD_BASE_URL = os.environ["DASHBOARD_BASE_URL"]
 
