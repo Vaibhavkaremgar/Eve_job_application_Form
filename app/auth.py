@@ -72,6 +72,9 @@ async def login(request: Request):
     request.session["next"] = next_url
     print("Scheme:", request.url.scheme)
     print("Forwarded Proto:", request.headers.get("x-forwarded-proto"))
+    print("LOGIN - Scheme:", request.url.scheme)
+    print("LOGIN - Forwarded Proto:", request.headers.get("x-forwarded-proto"))
+    print("LOGIN - Session:", request.session)
     return await oauth.google.authorize_redirect(request, redirect_uri)
 
 
