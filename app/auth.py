@@ -70,6 +70,8 @@ async def login(request: Request):
     redirect_uri = "https://eve.pontis.one/auth/callback"
     next_url = request.query_params.get("next", "/")
     request.session["next"] = next_url
+    print("Scheme:", request.url.scheme)
+    print("Forwarded Proto:", request.headers.get("x-forwarded-proto"))
     return await oauth.google.authorize_redirect(request, redirect_uri)
 
 
