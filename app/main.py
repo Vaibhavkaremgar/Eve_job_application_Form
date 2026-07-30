@@ -98,19 +98,39 @@ def _is_uuid(value: str | None) -> bool:
 
 def _job_payload_candidates(payload: object) -> list[dict[str, object]]:
     if isinstance(payload, list):
-        return [item for item in payload if isinstance(item, dict)]
+        candidates: list[dict[str, object]] = []
+        for item in payload:
+            candidates.extend(_job_payload_candidates(item))
+        return candidates
 
     if not isinstance(payload, dict):
         return []
 
     candidates: list[dict[str, object]] = [payload]
-    for key in ("job", "data", "record", "item", "result", "results", "jobs"):
-        nested = payload.get(key)
-        if isinstance(nested, dict):
-            candidates.insert(0, nested)
-        elif isinstance(nested, list):
-            candidates = [item for item in nested if isinstance(item, dict)] + candidates
-    return candidates
+    for value in payload.values():
+        candidates.extend(_job_payload_candidates(value))
+
+    seen: set[int] = set()
+    unique_candidates: list[dict[str, object]] = []
+    for candidate in candidates:
+        marker = id(candidate)
+        if marker in seen:
+            continue
+        seen.add(marker)
+        unique_candidates.append(candidate)
+    return unique_candidates
+
+
+def _first_text(data: dict[str, object], *keys: str) -> str:
+    for key in keys:
+        value = data.get(key)
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+        if value is not None and not isinstance(value, (dict, list)):
+            text = str(value).strip()
+            if text:
+                return text
+    return ""
 
 
 def _extract_job_reference(data: dict[str, object], fallback_business_id: str) -> dict[str, str] | None:
@@ -139,15 +159,18 @@ def _extract_job_reference(data: dict[str, object], fallback_business_id: str) -
     return {
         "business_job_id": business_job_id or fallback_business_id,
         "internal_job_id": internal_job_id,
-        "job_title": str(
-            data.get("job_title")
-            or data.get("job_role")
-            or data.get("role")
-            or data.get("title")
-            or data.get("job")
-            or ""
-        ).strip(),
-        "company_name": str(data.get("company_name") or data.get("company") or data.get("client") or "").strip(),
+        "job_title": _first_text(
+            data,
+            "job_title",
+            "jobTitle",
+            "job_role",
+            "jobRole",
+            "role",
+            "title",
+            "name",
+            "job",
+        ),
+        "company_name": _first_text(data, "company_name", "companyName", "company", "client", "employer"),
     }
 
 
