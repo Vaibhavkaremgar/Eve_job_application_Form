@@ -332,7 +332,7 @@
       {% endif %}
 
       <!-- Google sign-in -->
-      <a href="/auth/login{% if request.query_params.get('next') %}?next={{ request.query_params.get('next') }}{% endif %}" class="google-btn">
+      <a href="/auth/login" class="google-btn">
         <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" />
         Continue with Google
       </a>

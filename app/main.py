@@ -12,7 +12,14 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware
 
-from .auth import SESSION_COOKIE, get_current_user, is_session_expired, router as auth_router
+from .auth import (
+    SESSION_COOKIE,
+    get_current_user,
+    get_redirect_target,
+    is_session_expired,
+    router as auth_router,
+    store_redirect_target,
+)
 from .portal_store import (
     candidate_exists,
     dashboard_payload,
@@ -71,6 +78,7 @@ def _require_email(request: Request) -> str | None:
 
 
 def _redirect_login(request: Request) -> RedirectResponse:
+    store_redirect_target(request, get_redirect_target(request))
     login_url = "/login"
     response = RedirectResponse(login_url, status_code=303)
     if is_session_expired(request):
@@ -280,6 +288,9 @@ def _job_context(job_id: str | None) -> dict[str, str]:
 @app.get("/login", response_class=HTMLResponse)
 def login_page(request: Request):
     expired = is_session_expired(request)
+    next_target = request.query_params.get("next")
+    if next_target and request.session.get("post_auth_redirect") is None:
+        store_redirect_target(request, next_target)
     resp = templates.TemplateResponse("login.html", {"request": request, "expired": expired})
     if expired:
         resp.delete_cookie(SESSION_COOKIE)

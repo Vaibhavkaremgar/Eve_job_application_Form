@@ -17,6 +17,7 @@ oauth.register(
 _serializer = URLSafeTimedSerializer(os.getenv("SESSION_SECRET", "dev-secret-change-me"))
 
 SESSION_COOKIE = "candidate_session"
+SESSION_REDIRECT_KEY = "post_auth_redirect"
 # SESSION_MAX_AGE = 60 * 60 * 8  # 8 hours
 SESSION_MAX_AGE = 60 * 15 #15 mins
 #Now the page will auto logoff after 15 mins of inactivity. 
@@ -54,6 +55,19 @@ def is_session_expired(request: Request) -> bool:
         return True
     except BadSignature:
         return False
+
+
+def get_redirect_target(request: Request) -> str:
+    query_string = request.url.query
+    if query_string:
+        return f"{request.url.path}?{query_string}"
+    return request.url.path
+
+
+def store_redirect_target(request: Request, target: str | None = None) -> str:
+    redirect_target = target or get_redirect_target(request)
+    request.session[SESSION_REDIRECT_KEY] = redirect_target
+    return redirect_target
         
 
 
@@ -68,8 +82,10 @@ router = APIRouter()
 @router.get("/auth/login")
 async def login(request: Request):
     redirect_uri = "https://eve.pontis.one/auth/callback"
-    next_url = request.query_params.get("next", "/")
-    request.session["next"] = next_url
+    if request.session.get(SESSION_REDIRECT_KEY) is None:
+        next_url = request.query_params.get("next")
+        if next_url:
+            request.session[SESSION_REDIRECT_KEY] = next_url
     print("Scheme:", request.url.scheme)
     print("Forwarded Proto:", request.headers.get("x-forwarded-proto"))
     print("LOGIN - Scheme:", request.url.scheme)
@@ -88,7 +104,7 @@ async def auth_callback(request: Request):
     if not user or not user.get("email"):
         return RedirectResponse("/login")
 
-    next_url = request.session.pop("next", "/")
+    next_url = request.session.pop(SESSION_REDIRECT_KEY, "/")
     google_user = {
         "email": user.get("email", ""),
         "name": user.get("name", ""),
