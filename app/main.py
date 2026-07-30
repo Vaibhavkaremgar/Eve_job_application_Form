@@ -1,73 +1,149 @@
-import os
+from __future__ import annotations
+
 import logging
+import os
 from pathlib import Path
+
 import httpx
-from fastapi import FastAPI, Request, UploadFile, File, Form
+from fastapi import FastAPI, File, Form, Request, UploadFile
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
-from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware
 
-from .auth import router as auth_router, get_current_user, is_session_expired, SESSION_COOKIE
+from .auth import SESSION_COOKIE, get_current_user, is_session_expired, router as auth_router
+from .portal_store import (
+    candidate_exists,
+    dashboard_payload,
+    format_timestamp,
+    get_application_badge_class,
+    get_documents,
+    get_interviews,
+    get_jobs_submitted,
+    get_notifications,
+    get_profile,
+    get_resume,
+    upsert_candidate_profile,
+)
 
-
-def _normalize(value: str | None) -> str:
-    """Strip whitespace and lowercase for case-insensitive comparison."""
-    return (value or "").strip().lower()
-
-
-def _is_duplicate(existing_applications: list[dict], name: str, email: str, phone: str, linkedin_url: str | None) -> bool:
-    """
-    Treat a new submission as a duplicate of an existing application when the
-    candidate appears to be the same person, even if one identifier changed.
-
-    Rules (all comparisons are case-insensitive and whitespace-trimmed):
-      - Same name + same email + same phone  → duplicate
-      - Same name + same phone (email differs) → duplicate
-      - Same name + same email (phone differs) → duplicate
-      - Same name + same LinkedIn URL (when present on both) → duplicate
-    """
-    n_name  = _normalize(name)
-    n_email = _normalize(email)
-    n_phone = _normalize(phone)
-    n_linkedin = _normalize(linkedin_url)
-
-    for app in existing_applications:
-        e_name     = _normalize(app.get("name"))
-        e_email    = _normalize(app.get("email"))
-        e_phone    = _normalize(app.get("phone"))
-        e_linkedin = _normalize(app.get("linkedin_url"))
-
-        if e_name != n_name:
-            continue  # Different person — skip
-
-        # Same name + same email OR same phone → same person
-        if e_email == n_email or e_phone == n_phone:
-            return True
-
-        # Same name + same LinkedIn URL (non-empty) → same person
-        if n_linkedin and e_linkedin and n_linkedin == e_linkedin:
-            return True
-
-    return False
 
 logger = logging.getLogger(__name__)
 
 app = FastAPI()
 BASE_DIR = Path(__file__).resolve().parent.parent
 STATIC_DIR = BASE_DIR / "static"
+UPLOAD_DIR = BASE_DIR / "uploads"
 TEMPLATES_DIR = BASE_DIR / "templates"
 
-app.add_middleware(SessionMiddleware, secret_key=os.environ["SESSION_SECRET"])
+app.add_middleware(SessionMiddleware, secret_key=os.getenv("SESSION_SECRET", "dev-secret-change-me"))
 app.include_router(auth_router)
+
 if STATIC_DIR.exists():
     app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 else:
     logger.warning("Static directory not found at %s; skipping /static mount.", STATIC_DIR)
 
+UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
+
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 
-DASHBOARD_BASE_URL = os.environ["DASHBOARD_BASE_URL"]
+DASHBOARD_BASE_URL = os.getenv("DASHBOARD_BASE_URL", "")
+
+
+def _current_google_user(request: Request) -> dict | None:
+    user = request.session.get("google_user")
+    return user if isinstance(user, dict) else None
+
+
+def _current_email(request: Request) -> str | None:
+    return get_current_user(request)
+
+
+def _require_email(request: Request) -> str | None:
+    email = _current_email(request)
+    if not email:
+        return None
+    if is_session_expired(request):
+        return None
+    return email
+
+
+def _redirect_login(request: Request) -> RedirectResponse:
+    login_url = "/login"
+    response = RedirectResponse(login_url, status_code=303)
+    if is_session_expired(request):
+        response.delete_cookie(SESSION_COOKIE)
+    return response
+
+
+def _allowed(filename: str) -> bool:
+    return "." in filename and filename.rsplit(".", 1)[-1].lower() in {"pdf", "doc", "docx"}
+
+
+def _image_allowed(filename: str) -> bool:
+    return "." in filename and filename.rsplit(".", 1)[-1].lower() in {"png", "jpg", "jpeg", "webp", "gif"}
+
+
+def _is_duplicate(existing_applications: list[dict], name: str, email: str, phone: str, linkedin_url: str | None) -> bool:
+    n_name = (name or "").strip().lower()
+    n_email = (email or "").strip().lower()
+    n_phone = (phone or "").strip().lower()
+    n_linkedin = (linkedin_url or "").strip().lower()
+
+    for application in existing_applications:
+        e_name = (application.get("name") or "").strip().lower()
+        e_email = (application.get("email") or "").strip().lower()
+        e_phone = (application.get("phone") or "").strip().lower()
+        e_linkedin = (application.get("linkedin_url") or "").strip().lower()
+
+        if e_name != n_name:
+            continue
+        if e_email == n_email or e_phone == n_phone:
+            return True
+        if n_linkedin and e_linkedin and n_linkedin == e_linkedin:
+            return True
+    return False
+
+
+def _job_context(job_id: str | None) -> dict[str, str]:
+    if not job_id:
+        return {"job_id": "", "job_title": "", "company_name": "", "job_error": ""}
+
+    if not DASHBOARD_BASE_URL:
+        return {
+            "job_id": job_id,
+            "job_title": "",
+            "company_name": "",
+            "job_error": "Job context is unavailable right now, but you can still complete your candidate profile.",
+        }
+
+    try:
+        response = httpx.get(f"{DASHBOARD_BASE_URL}/api/public/jobs/{job_id}", timeout=10)
+        if response.status_code == 200:
+            data = response.json()
+            return {
+                "job_id": data.get("job_id", job_id),
+                "job_title": data.get("job_title", ""),
+                "company_name": data.get("company_name", ""),
+                "job_error": "",
+            }
+        if response.status_code in (404, 410):
+            return {
+                "job_id": job_id,
+                "job_title": "",
+                "company_name": "",
+                "job_error": "This application link is no longer available, but you can still complete your candidate profile.",
+            }
+    except httpx.RequestError:
+        logger.warning("Could not fetch job details for job_id=%s", job_id)
+
+    return {
+        "job_id": job_id,
+        "job_title": "",
+        "company_name": "",
+        "job_error": "This application link is no longer available, but you can still complete your candidate profile.",
+    }
 
 
 @app.get("/login", response_class=HTMLResponse)
@@ -81,49 +157,198 @@ def login_page(request: Request):
 
 @app.get("/", response_class=HTMLResponse)
 async def home(request: Request):
-    if not get_current_user(request):
-        job_id = request.query_params.get("job_id", "")
-        next_url = f"/?job_id={job_id}" if job_id else "/"
-        login_url = f"/login?next={next_url}" if job_id else "/login"
-        if is_session_expired(request):
-            redirect = RedirectResponse(login_url)
-            redirect.delete_cookie(SESSION_COOKIE)
-            return redirect
-        return RedirectResponse(login_url)
-    job_id = request.query_params.get("job_id", "")
-    job_title = ""
-    company_name = ""
-    job_error = None
+    email = _require_email(request)
+    if not email:
+        job_id = request.query_params.get("job_id")
+        target = "/application"
+        if job_id:
+            target += f"?job_id={job_id}"
+        return RedirectResponse(f"/login?next={target}", status_code=303)
+
+    if candidate_exists(email):
+        return RedirectResponse("/candidate-dashboard", status_code=303)
+
+    job_id = request.query_params.get("job_id")
+    target = "/application"
     if job_id:
-        try:
-            async with httpx.AsyncClient(timeout=10) as client:
-                resp = await client.get(f"{DASHBOARD_BASE_URL}/api/public/jobs/{job_id}")
-            if resp.status_code == 200:
-                data = resp.json()
-                job_title = data.get("job_title", "")
-                company_name = data.get("company_name", "")
-            elif resp.status_code in (404, 410):
-                job_error = "This job posting is no longer available."
-            else:
-                logger.warning("Unexpected status fetching job_id=%s: %s", job_id, resp.status_code)
-        except httpx.RequestError:
-            logger.warning("Could not fetch job details for job_id=%s", job_id)
-    else:
-        job_error = "No job selected. Please use a valid job application link."
-    return templates.TemplateResponse("index.html", {
-        "request": request,
-        "job_id": job_id,
-        "job_title": job_title,
-        "company_name": company_name,
-        "job_error": job_error,
-    })
+        target += f"?job_id={job_id}"
+    return RedirectResponse(target, status_code=303)
 
 
-ALLOWED_EXTENSIONS = {"pdf", "doc", "docx"}
+@app.get("/application", response_class=HTMLResponse)
+def application_page(request: Request):
+    email = _require_email(request)
+    if not email:
+        return _redirect_login(request)
+
+    google_user = _current_google_user(request) or {}
+    if candidate_exists(email):
+        return RedirectResponse("/candidate-dashboard", status_code=303)
+
+    job_id = request.query_params.get("job_id")
+    context = _job_context(job_id)
+    profile = get_profile(email, google_user)
+    return templates.TemplateResponse(
+        "index.html",
+        {
+            "request": request,
+            "google_user": google_user,
+            "profile": profile,
+            **context,
+        },
+    )
 
 
-def _allowed(filename: str) -> bool:
-    return "." in filename and filename.rsplit(".", 1)[-1].lower() in ALLOWED_EXTENSIONS
+@app.get("/candidate-dashboard", response_class=HTMLResponse)
+def candidate_dashboard_page(request: Request):
+    email = _require_email(request)
+    if not email:
+        return _redirect_login(request)
+
+    google_user = _current_google_user(request) or {}
+    if not candidate_exists(email):
+        return RedirectResponse("/application", status_code=303)
+
+    context = dashboard_payload(email, google_user)
+    context["request"] = request
+    context["candidate"] = context["profile"]
+    context["badge_class"] = get_application_badge_class
+    context["format_timestamp"] = format_timestamp
+    return templates.TemplateResponse("dashboard.html", context)
+
+
+@app.get("/dashboard", response_class=HTMLResponse)
+def legacy_dashboard_redirect():
+    return RedirectResponse("/candidate-dashboard", status_code=303)
+
+
+@app.get("/candidate/dashboard")
+def candidate_dashboard_api(request: Request):
+    email = _require_email(request)
+    if not email:
+        return JSONResponse(status_code=401, content={"detail": "Unauthorized"})
+    return dashboard_payload(email, _current_google_user(request))
+
+
+@app.get("/candidate/profile")
+def candidate_profile(request: Request):
+    email = _require_email(request)
+    if not email:
+        return JSONResponse(status_code=401, content={"detail": "Unauthorized"})
+    return get_profile(email, _current_google_user(request))
+
+
+@app.get("/candidate/resume")
+def candidate_resume(request: Request):
+    email = _require_email(request)
+    if not email:
+        return JSONResponse(status_code=401, content={"detail": "Unauthorized"})
+    return {"resume": get_resume(email)}
+
+
+@app.get("/candidate/jobs-submitted")
+def candidate_jobs_submitted(request: Request):
+    email = _require_email(request)
+    if not email:
+        return JSONResponse(status_code=401, content={"detail": "Unauthorized"})
+    return {"jobs_submitted": get_jobs_submitted(email)}
+
+
+@app.get("/candidate/interviews")
+def candidate_interviews(request: Request):
+    email = _require_email(request)
+    if not email:
+        return JSONResponse(status_code=401, content={"detail": "Unauthorized"})
+    return {"interviews": get_interviews(email)}
+
+
+@app.get("/candidate/notifications")
+def candidate_notifications(request: Request):
+    email = _require_email(request)
+    if not email:
+        return JSONResponse(status_code=401, content={"detail": "Unauthorized"})
+    return {"notifications": get_notifications(email)}
+
+
+@app.get("/candidate/documents")
+def candidate_documents(request: Request):
+    email = _require_email(request)
+    if not email:
+        return JSONResponse(status_code=401, content={"detail": "Unauthorized"})
+    return {"documents": get_documents(email)}
+
+
+@app.put("/candidate/profile")
+async def update_profile(
+    request: Request,
+    name: str | None = Form(None),
+    phone: str | None = Form(None),
+    linkedin_url: str | None = Form(None),
+    current_location: str | None = Form(None),
+    preferred_location: str | None = Form(None),
+    visa_status: str | None = Form(None),
+    experience_years: str | None = Form(None),
+    primary_skills: str | None = Form(None),
+    secondary_skills: str | None = Form(None),
+    profile_picture: UploadFile | None = File(None),
+):
+    email = _require_email(request)
+    if not email:
+        return JSONResponse(status_code=401, content={"detail": "Unauthorized"})
+
+    if linkedin_url and linkedin_url.strip() and not linkedin_url.strip().startswith("https://"):
+        return JSONResponse(status_code=400, content={"detail": "LinkedIn profile URLs must start with https://"})
+
+    picture_bytes = None
+    picture_name = None
+    if profile_picture and profile_picture.filename:
+        if not _image_allowed(profile_picture.filename):
+            return JSONResponse(status_code=400, content={"detail": "Profile picture must be a PNG, JPG, JPEG, WEBP, or GIF file."})
+        picture_bytes = await profile_picture.read()
+        picture_name = profile_picture.filename
+
+    candidate = upsert_candidate_profile(
+        email,
+        name=name,
+        phone=phone,
+        linkedin_url=linkedin_url,
+        current_location=current_location,
+        preferred_location=preferred_location,
+        visa_status=visa_status,
+        experience_years=experience_years,
+        primary_skills=primary_skills,
+        secondary_skills=secondary_skills,
+        profile_picture_bytes=picture_bytes,
+        profile_picture_name=picture_name,
+        google_user=_current_google_user(request),
+    )
+    return {
+        "detail": "Profile updated successfully.",
+        "profile": get_profile(email, _current_google_user(request)),
+        "candidate": candidate,
+    }
+
+
+@app.put("/candidate/resume")
+async def update_resume(
+    request: Request,
+    resume: UploadFile = File(...),
+):
+    email = _require_email(request)
+    if not email:
+        return JSONResponse(status_code=401, content={"detail": "Unauthorized"})
+
+    if not _allowed(resume.filename):
+        return JSONResponse(status_code=400, content={"detail": "Resume must be a PDF, DOC, or DOCX file."})
+
+    resume_bytes = await resume.read()
+    candidate = upsert_candidate_profile(
+        email,
+        resume_bytes=resume_bytes,
+        resume_name=resume.filename,
+        google_user=_current_google_user(request),
+    )
+    return {"detail": "Resume updated successfully.", "resume": get_resume(email), "candidate": candidate}
 
 
 @app.post("/apply")
@@ -137,59 +362,52 @@ async def apply(
     resume: UploadFile = File(...),
     cover_letter: UploadFile = File(None),
 ):
-    if not get_current_user(request):
+    if not _require_email(request):
         return JSONResponse(status_code=401, content={"detail": "Unauthorized"})
 
     if not job_id or not job_id.strip():
         return JSONResponse(status_code=400, content={"detail": "job_id is required"})
 
     if linkedin_url and not linkedin_url.startswith("https://"):
-        return JSONResponse(status_code=400, content={"detail": "Please enter a valid LinkedIn profile URL starting with https://"})
+        return JSONResponse(
+            status_code=400,
+            content={"detail": "Please enter a valid LinkedIn profile URL starting with https://"},
+        )
 
     if not _allowed(resume.filename):
-        return JSONResponse(status_code=400, content={"detail": "Resume must be a PDF or DOCX file."})
+        return JSONResponse(status_code=400, content={"detail": "Resume must be a PDF, DOC, or DOCX file."})
     if cover_letter and cover_letter.filename and not _allowed(cover_letter.filename):
-        return JSONResponse(status_code=400, content={"detail": "Cover letter must be a PDF or DOCX file."})
+        return JSONResponse(status_code=400, content={"detail": "Cover letter must be a PDF, DOC, or DOCX file."})
 
-    # --- Duplicate detection: fetch existing applications for this job ---
+    resume_bytes = await resume.read()
+    cover_letter_bytes = await cover_letter.read() if cover_letter and cover_letter.filename else None
+
     try:
         async with httpx.AsyncClient(timeout=10) as client:
             dup_resp = await client.get(
                 f"{DASHBOARD_BASE_URL}/api/public/applications",
                 params={"job_id": job_id},
             )
-            print("Job ID:", job_id)
-            print("Duplicate GET Status:", dup_resp.status_code)
-            print("Duplicate GET Response:", dup_resp.text)
-            
-        if dup_resp.status_code == 200:
-            existing = dup_resp.json() if isinstance(dup_resp.json(), list) else dup_resp.json().get("applications", [])
 
-            print("Existing applications:", existing)
-            print("Incoming:")
-            print({
-                "name": name,
-                "email": email,
-                "phone": phone,
-                "linkedin_url": linkedin_url,
-        })
-            print("Duplicate result:", _is_duplicate(existing, name, email, phone, linkedin_url))
+        if dup_resp.status_code == 200:
+            payload = dup_resp.json()
+            existing = payload if isinstance(payload, list) else payload.get("applications", [])
             if _is_duplicate(existing, name, email, phone, linkedin_url):
                 return JSONResponse(status_code=409, content={"detail": "Application already exists."})
         else:
-            logger.warning("Could not fetch existing applications for duplicate check — job_id=%s status=%s", job_id, dup_resp.status_code)
+            logger.warning(
+                "Could not fetch existing applications for duplicate check - job_id=%s status=%s",
+                job_id,
+                dup_resp.status_code,
+            )
     except httpx.RequestError:
-        logger.warning("Duplicate check request failed — job_id=%s, proceeding without check", job_id)
-    # --- End duplicate detection ---
+        logger.warning("Duplicate check request failed - job_id=%s, proceeding without check", job_id)
 
-    logger.info(
-        "Forwarding application to Dashboard — job_id=%s email=%s name=%s",
-        job_id, email, name,
-    )
+    logger.info("Forwarding application to Dashboard - job_id=%s email=%s name=%s", job_id, email, name)
 
-    files = {"resume": (resume.filename, await resume.read(), resume.content_type)}
-    if cover_letter and cover_letter.filename:
-        files["cover_letter"] = (cover_letter.filename, await cover_letter.read(), cover_letter.content_type)
+    files = {"resume": (resume.filename, resume_bytes, resume.content_type)}
+    if cover_letter and cover_letter.filename and cover_letter_bytes is not None:
+        files["cover_letter"] = (cover_letter.filename, cover_letter_bytes, cover_letter.content_type)
 
     data = {"job_id": job_id, "name": name, "email": email, "phone": phone}
     if linkedin_url:
@@ -202,14 +420,31 @@ async def apply(
                 data=data,
                 files=files,
             )
-        logger.info(
-            "Dashboard response — status=%s job_id=%s email=%s",
-            resp.status_code, job_id, email,
-        )
-        return JSONResponse(status_code=resp.status_code, content=resp.json())
+
+        response_json = resp.json() if resp.content else {}
+        if isinstance(response_json, dict):
+            response_json.setdefault("dashboard_url", "/candidate-dashboard")
+        if resp.status_code < 400:
+            try:
+                upsert_candidate_profile(
+                    email,
+                    name=name,
+                    phone=phone,
+                    linkedin_url=linkedin_url,
+                    resume_bytes=resume_bytes,
+                    resume_name=resume.filename,
+                    cover_letter_bytes=cover_letter_bytes,
+                    cover_letter_name=cover_letter.filename if cover_letter and cover_letter.filename else None,
+                    google_user=_current_google_user(request),
+                    job_id=job_id,
+                )
+            except Exception:
+                logger.exception("Failed to mirror candidate locally for %s", email)
+        logger.info("Dashboard response - status=%s job_id=%s email=%s", resp.status_code, job_id, email)
+        return JSONResponse(status_code=resp.status_code, content=response_json)
     except httpx.TimeoutException:
-        logger.exception("Dashboard request timed out — job_id=%s email=%s", job_id, email)
+        logger.exception("Dashboard request timed out - job_id=%s email=%s", job_id, email)
         return JSONResponse(status_code=504, content={"detail": "Upstream service timed out."})
     except httpx.RequestError:
-        logger.exception("Dashboard request failed — job_id=%s email=%s", job_id, email)
+        logger.exception("Dashboard request failed - job_id=%s email=%s", job_id, email)
         return JSONResponse(status_code=502, content={"detail": "Could not reach upstream service."})

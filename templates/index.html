@@ -125,6 +125,11 @@
                 width: 100%;
             }
         }
+
+        @keyframes successPop {
+            from { opacity: 0; transform: translateY(16px) scale(0.98); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
     </style>
     </head>
     <body>
@@ -153,48 +158,67 @@
          <label>LinkedIn URL:</label>
          <input type="url" name="linkedin_url" id="linkedin_url" required placeholder="https://www.linkedin.com/in/your-profile"><br><br>
          <label>Upload Resume*:</label>
-         <input type = "file" name = "resume" id = "resume" accept = ".pdf,.docx" required><br><br>
+         <input type = "file" name = "resume" id = "resume" accept = ".pdf,.doc,.docx" required><br><br>
          <label>Upload Cover Letter:</label>
          <input type = "file" name = "cover_letter" id = "cover_letter" accept = ".pdf,.doc,.docx"><br><br>
          <input type="submit" value="Submit">
         </form>
         {% endif %}
+        <div id="success-screen" style="display:none; position:fixed; inset:0; align-items:center; justify-content:center; background:rgba(15,23,42,0.48); backdrop-filter: blur(8px); z-index:30;">
+            <div style="width:min(92vw,420px); background:rgba(255,255,255,0.96); border-radius:24px; padding:34px 28px; box-shadow:0 24px 70px rgba(15,23,42,0.18); text-align:center; animation:successPop 0.5s ease both;">
+                <div style="width:84px; height:84px; margin:0 auto 18px; border-radius:50%; display:grid; place-items:center; background:linear-gradient(135deg, rgba(22,163,74,0.15), rgba(34,197,94,0.22)); color:#16a34a;">
+                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                        <path d="M20 6L9 17l-5-5" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" />
+                    </svg>
+                </div>
+                <h2 style="margin:0 0 10px; color:#0f172a;">Application submitted successfully</h2>
+                <p style="margin:0; color:#64748b; line-height:1.7;">Preparing your candidate dashboard now.</p>
+                <p style="margin:14px 0 0; color:#1d4ed8; font-weight:700;">Redirecting in 2 seconds...</p>
+            </div>
+        </div>
         <script>
-
-const nameField = document.querySelector('input[name="name"]');
-
-nameField.addEventListener("input", function () {
-    this.value = this.value.replace(/[^A-Za-z ]/g, "");
-});
-
-
-const mobile = document.querySelector('input[name="phone"]');
-
-mobile.addEventListener("input", function () {
-    this.value = this.value.replace(/[^0-9]/g, "");
-    if (this.value.length > 10) {
-        this.value = this.value.slice(0, 10);
-    }
-});
-const linkedinInput = document.getElementById("linkedin_url");
-
-function validateLinkedin() {
-    const msg = linkedinInput.value && !linkedinInput.value.startsWith("https://")
-        ? "Please enter a valid LinkedIn profile URL starting with https://"
-        : "";
-    linkedinInput.setCustomValidity(msg);
-}
-
-linkedinInput.addEventListener("input", validateLinkedin);
-linkedinInput.addEventListener("invalid", function () {
-    if (this.value && !this.value.startsWith("https://")) {
-        this.setCustomValidity("Please enter a valid LinkedIn profile URL starting with https://");
-    }
-});
-
+const successScreen = document.getElementById("success-screen");
+const formHost = document.getElementById("applicationForm");
 const form = document.getElementById("applicationForm");
 
-form.addEventListener("submit", async function (e) {
+if (form) {
+    const nameField = document.querySelector('input[name="name"]');
+    if (nameField) {
+        nameField.addEventListener("input", function () {
+            this.value = this.value.replace(/[^A-Za-z ]/g, "");
+        });
+    }
+
+    const mobile = document.querySelector('input[name="phone"]');
+    if (mobile) {
+        mobile.addEventListener("input", function () {
+            this.value = this.value.replace(/[^0-9]/g, "");
+            if (this.value.length > 10) {
+                this.value = this.value.slice(0, 10);
+            }
+        });
+    }
+    const linkedinInput = document.getElementById("linkedin_url");
+
+    function validateLinkedin() {
+        const msg = linkedinInput && linkedinInput.value && !linkedinInput.value.startsWith("https://")
+            ? "Please enter a valid LinkedIn profile URL starting with https://"
+            : "";
+        if (linkedinInput) {
+            linkedinInput.setCustomValidity(msg);
+        }
+    }
+
+    if (linkedinInput) {
+        linkedinInput.addEventListener("input", validateLinkedin);
+        linkedinInput.addEventListener("invalid", function () {
+            if (this.value && !this.value.startsWith("https://")) {
+                this.setCustomValidity("Please enter a valid LinkedIn profile URL starting with https://");
+            }
+        });
+    }
+
+    form.addEventListener("submit", async function (e) {
 
     e.preventDefault();
 
@@ -216,16 +240,20 @@ form.addEventListener("submit", async function (e) {
         const result = await response.json();
 
         if (response.ok) {
-            alert("Thank you! Your application has been received successfully. If you're shortlisted, we'll contact you with the next steps.");
-            form.reset();
+            formHost.style.display = "none";
+            successScreen.style.display = "flex";
+            window.setTimeout(() => {
+                window.location.href = result.dashboard_url || "/candidate-dashboard";
+            }, 2000);
         } else {
             alert(result.detail || result.message || "Application submission failed.");
         }
-    } catch {
-        alert("Application submission failed.");
-    }
+        } catch {
+            alert("Application submission failed.");
+        }
 
-});
+    });
+}
 </script>
     </body>
 </html>

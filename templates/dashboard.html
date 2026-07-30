@@ -1,0 +1,1255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Candidate Dashboard | Pontis Careers</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #eaf2ff;
+      --bg-2: #f8fbff;
+      --panel: rgba(255, 255, 255, 0.88);
+      --panel-strong: #ffffff;
+      --text: #0f172a;
+      --muted: #64748b;
+      --line: rgba(148, 163, 184, 0.18);
+      --blue: #1d4ed8;
+      --blue-2: #2563eb;
+      --blue-soft: rgba(37, 99, 235, 0.12);
+      --success: #16a34a;
+      --warning: #d97706;
+      --danger: #dc2626;
+      --shadow: 0 24px 60px rgba(15, 23, 42, 0.14);
+      --radius: 24px;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { min-height: 100%; }
+    body {
+      margin: 0;
+      font-family: "Inter", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top left, rgba(37, 99, 235, 0.16), transparent 26%),
+        radial-gradient(circle at bottom right, rgba(59, 130, 246, 0.1), transparent 26%),
+        linear-gradient(180deg, var(--bg), var(--bg-2));
+    }
+
+    .layout {
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: 286px minmax(0, 1fr);
+    }
+
+    .sidebar {
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      padding: 22px 18px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.82), rgba(255,255,255,0.66));
+      border-right: 1px solid rgba(255,255,255,0.72);
+      backdrop-filter: blur(18px);
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      overflow-y: auto;
+    }
+
+    .brand {
+      padding: 18px 16px;
+      border-radius: 22px;
+      background: linear-gradient(135deg, rgba(29, 78, 216, 0.12), rgba(255,255,255,0.76));
+      border: 1px solid rgba(255,255,255,0.72);
+      box-shadow: 0 10px 24px rgba(37, 99, 235, 0.08);
+    }
+
+    .brand small {
+      display: block;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.1em;
+      color: var(--blue);
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+
+    .brand h1 {
+      margin: 0;
+      font-size: 24px;
+      letter-spacing: -0.05em;
+    }
+
+    .brand p {
+      margin: 10px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    .mini-profile {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px;
+      border-radius: 20px;
+      background: rgba(255,255,255,0.74);
+      border: 1px solid rgba(148, 163, 184, 0.14);
+    }
+
+    .avatar,
+    .avatar-fallback,
+    .avatar-lg {
+      object-fit: cover;
+      border-radius: 50%;
+      box-shadow: 0 14px 30px rgba(37, 99, 235, 0.16);
+    }
+
+    .avatar { width: 52px; height: 52px; }
+    .avatar-lg { width: 120px; height: 120px; }
+
+    .avatar-fallback {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, var(--blue), #60a5fa);
+      color: white;
+      font-weight: 800;
+    }
+
+    .avatar-fallback.avatar-lg {
+      font-size: 34px;
+    }
+
+    .mini-profile strong,
+    .header-user strong,
+    .profile-name {
+      display: block;
+      margin-bottom: 4px;
+      font-size: 14px;
+      font-weight: 800;
+    }
+
+    .mini-profile span,
+    .header-user span,
+    .muted {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.45;
+      display: block;
+    }
+
+    .nav {
+      display: grid;
+      gap: 8px;
+      padding-top: 2px;
+    }
+
+    .nav button {
+      border: 0;
+      text-align: left;
+      background: transparent;
+      color: #334155;
+      border-radius: 16px;
+      padding: 13px 14px;
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.2s ease, transform 0.2s ease, color 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .nav button:hover,
+    .nav button.active {
+      background: rgba(37, 99, 235, 0.1);
+      color: var(--blue);
+      transform: translateX(2px);
+    }
+
+    .nav .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: rgba(37, 99, 235, 0.25);
+      box-shadow: inset 0 0 0 3px rgba(37, 99, 235, 0.08);
+    }
+
+    .sidebar-footer {
+      margin-top: auto;
+      padding: 14px;
+      border-radius: 18px;
+      background: linear-gradient(135deg, rgba(37, 99, 235, 0.08), rgba(255,255,255,0.74));
+      border: 1px solid rgba(148, 163, 184, 0.14);
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.6;
+    }
+
+    .content {
+      min-width: 0;
+      padding: 22px;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 18px;
+      margin-bottom: 20px;
+    }
+
+    .topbar-card {
+      flex: 1;
+      padding: 20px 22px;
+      border-radius: 26px;
+      background: linear-gradient(135deg, rgba(255,255,255,0.9), rgba(255,255,255,0.72));
+      box-shadow: var(--shadow);
+      border: 1px solid rgba(255,255,255,0.8);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      animation: rise 0.55s ease both;
+    }
+
+    .header-copy h2 {
+      margin: 0 0 6px;
+      font-size: 28px;
+      letter-spacing: -0.05em;
+    }
+
+    .header-copy p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    .header-user {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 12px 14px;
+      border-radius: 18px;
+      background: rgba(255,255,255,0.76);
+      border: 1px solid rgba(148, 163, 184, 0.16);
+      min-width: 270px;
+    }
+
+    .signout {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 13px 16px;
+      border-radius: 16px;
+      background: linear-gradient(135deg, var(--blue), var(--blue-2));
+      color: white;
+      text-decoration: none;
+      font-weight: 800;
+      box-shadow: 0 18px 26px rgba(37, 99, 235, 0.24);
+      white-space: nowrap;
+    }
+
+    .section {
+      display: none;
+      animation: fadeIn 0.35s ease both;
+    }
+
+    .section.active { display: block; }
+
+    .grid {
+      display: grid;
+      gap: 18px;
+    }
+
+    .cards-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .cards-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+    .card {
+      background: var(--panel);
+      backdrop-filter: blur(18px);
+      border: 1px solid rgba(255,255,255,0.78);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 22px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .card::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(180deg, rgba(255,255,255,0.52), transparent 22%);
+      pointer-events: none;
+    }
+
+    .card-head {
+      display: flex;
+      align-items: start;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 18px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .card-head h3 {
+      margin: 0 0 6px;
+      font-size: 20px;
+      letter-spacing: -0.04em;
+    }
+
+    .card-head p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.6;
+      font-size: 13px;
+    }
+
+    .meta-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 9px 12px;
+      border-radius: 999px;
+      background: rgba(37, 99, 235, 0.08);
+      color: var(--blue);
+      font-size: 12px;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .hero-card {
+      display: grid;
+      grid-template-columns: 1.15fr 0.85fr;
+      gap: 18px;
+      align-items: stretch;
+    }
+
+    .hero-panel,
+    .side-panel {
+      padding: 22px;
+      border-radius: 24px;
+      background: rgba(255,255,255,0.82);
+      border: 1px solid rgba(148, 163, 184, 0.14);
+      position: relative;
+      z-index: 1;
+    }
+
+    .hero-panel h3 {
+      margin: 0 0 10px;
+      font-size: 26px;
+      letter-spacing: -0.05em;
+    }
+
+    .hero-panel p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.8;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+      margin-top: 18px;
+    }
+
+    .stat {
+      padding: 16px;
+      border-radius: 20px;
+      background: rgba(255,255,255,0.9);
+      border: 1px solid rgba(148, 163, 184, 0.14);
+    }
+
+    .stat strong {
+      display: block;
+      font-size: 26px;
+      color: var(--blue);
+      margin-bottom: 6px;
+    }
+
+    .stat span {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .profile-summary {
+      display: grid;
+      grid-template-columns: 132px 1fr;
+      gap: 18px;
+      align-items: center;
+      position: relative;
+      z-index: 1;
+    }
+
+    .profile-photo {
+      width: 132px;
+      height: 132px;
+    }
+
+    .profile-details {
+      display: grid;
+      gap: 10px;
+    }
+
+    .profile-row {
+      display: flex;
+      gap: 10px;
+      justify-content: space-between;
+      align-items: flex-start;
+      padding: 10px 0;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+    }
+
+    .profile-row:last-child { border-bottom: 0; }
+
+    .profile-row span:first-child {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .profile-row span:last-child {
+      text-align: right;
+      font-weight: 700;
+      max-width: 70%;
+      word-break: break-word;
+    }
+
+    .actions-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 16px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .button {
+      border: 0;
+      border-radius: 14px;
+      padding: 12px 16px;
+      font: inherit;
+      font-weight: 800;
+      cursor: pointer;
+      transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .button.primary {
+      background: linear-gradient(135deg, var(--blue), var(--blue-2));
+      color: white;
+      box-shadow: 0 16px 24px rgba(37, 99, 235, 0.22);
+    }
+
+    .button.ghost {
+      background: rgba(255,255,255,0.82);
+      color: #1e3a8a;
+      border: 1px solid rgba(37, 99, 235, 0.16);
+    }
+
+    .button:hover { transform: translateY(-1px); }
+
+    .summary-list {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 14px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .summary-item {
+      padding: 16px;
+      border-radius: 20px;
+      background: rgba(255,255,255,0.8);
+      border: 1px solid rgba(148, 163, 184, 0.14);
+    }
+
+    .summary-item strong {
+      display: block;
+      font-size: 24px;
+      color: var(--blue);
+      margin-bottom: 6px;
+    }
+
+    .summary-item span {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .timeline {
+      display: grid;
+      gap: 14px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .timeline-step {
+      display: grid;
+      grid-template-columns: 20px 1fr;
+      gap: 12px;
+      align-items: start;
+    }
+
+    .timeline-step .marker {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      margin-top: 4px;
+      background: rgba(148, 163, 184, 0.25);
+      box-shadow: inset 0 0 0 4px rgba(255,255,255,0.9);
+    }
+
+    .timeline-step.done .marker { background: var(--success); }
+    .timeline-step.active .marker { background: var(--blue); box-shadow: 0 0 0 5px rgba(37, 99, 235, 0.14); }
+    .timeline-step .title { font-weight: 800; }
+    .timeline-step .desc { color: var(--muted); font-size: 13px; line-height: 1.5; }
+
+    .table-wrap {
+      overflow-x: auto;
+      position: relative;
+      z-index: 1;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 760px;
+    }
+
+    thead th {
+      text-align: left;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      padding: 0 0 12px;
+    }
+
+    tbody td {
+      padding: 16px 0;
+      border-top: 1px solid rgba(148, 163, 184, 0.12);
+      vertical-align: top;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 11px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .badge::before {
+      content: "";
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+
+    .badge-blue { color: #1d4ed8; background: rgba(37, 99, 235, 0.08); }
+    .badge-indigo { color: #4338ca; background: rgba(67, 56, 202, 0.08); }
+    .badge-green { color: #15803d; background: rgba(22, 163, 74, 0.09); }
+    .badge-amber { color: #b45309; background: rgba(245, 158, 11, 0.1); }
+    .badge-slate { color: #475569; background: rgba(100, 116, 139, 0.1); }
+    .badge-emerald { color: #047857; background: rgba(16, 185, 129, 0.1); }
+    .badge-rose { color: #be123c; background: rgba(244, 63, 94, 0.1); }
+
+    .stack {
+      display: grid;
+      gap: 12px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .notice-card,
+    .doc-card {
+      padding: 18px;
+      border-radius: 20px;
+      background: rgba(255,255,255,0.82);
+      border: 1px solid rgba(148, 163, 184, 0.14);
+      display: grid;
+      gap: 10px;
+    }
+
+    .notice-card h4,
+    .doc-card h4 {
+      margin: 0;
+      font-size: 16px;
+      letter-spacing: -0.03em;
+    }
+
+    .notice-card p,
+    .doc-card p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.6;
+      font-size: 13px;
+    }
+
+    .tag-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .tag {
+      padding: 7px 10px;
+      border-radius: 999px;
+      background: rgba(37, 99, 235, 0.08);
+      color: var(--blue);
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .field-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+
+    .field {
+      display: grid;
+      gap: 8px;
+    }
+
+    label {
+      font-size: 13px;
+      font-weight: 800;
+      color: #1e293b;
+    }
+
+    input {
+      width: 100%;
+      padding: 13px 14px;
+      border-radius: 14px;
+      border: 1px solid rgba(148, 163, 184, 0.26);
+      background: rgba(255,255,255,0.92);
+      color: var(--text);
+      font: inherit;
+    }
+
+    input:focus {
+      outline: none;
+      border-color: rgba(37, 99, 235, 0.5);
+      box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
+    }
+
+    .upload-row {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .upload-row input[type="file"] { flex: 1 1 280px; }
+
+    .toast {
+      position: fixed;
+      right: 20px;
+      bottom: 20px;
+      max-width: 360px;
+      padding: 14px 16px;
+      border-radius: 16px;
+      background: rgba(15, 23, 42, 0.92);
+      color: white;
+      box-shadow: 0 20px 40px rgba(15, 23, 42, 0.22);
+      opacity: 0;
+      transform: translateY(12px);
+      pointer-events: none;
+      transition: opacity 0.25s ease, transform 0.25s ease;
+      z-index: 30;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .empty-state {
+      padding: 20px;
+      border-radius: 18px;
+      background: rgba(255,255,255,0.75);
+      border: 1px dashed rgba(37, 99, 235, 0.2);
+      color: var(--muted);
+      line-height: 1.7;
+    }
+
+    .skeleton {
+      position: relative;
+      overflow: hidden;
+      background: linear-gradient(90deg, rgba(226, 232, 240, 0.62), rgba(255,255,255,0.92), rgba(226,232,240,0.62));
+      background-size: 220% 100%;
+      animation: shimmer 1.3s linear infinite;
+    }
+
+    @keyframes shimmer {
+      from { background-position: 200% 0; }
+      to { background-position: -200% 0; }
+    }
+
+    @keyframes rise {
+      from { opacity: 0; transform: translateY(16px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    @media (max-width: 1180px) {
+      .layout { grid-template-columns: 1fr; }
+      .sidebar { position: relative; height: auto; }
+      .summary-list,
+      .cards-3,
+      .cards-2,
+      .field-grid,
+      .hero-card { grid-template-columns: 1fr; }
+      .topbar { flex-direction: column; align-items: stretch; }
+      .header-user { min-width: 0; }
+    }
+
+    @media (max-width: 720px) {
+      .content { padding: 14px; }
+      .topbar-card, .card, .hero-panel, .side-panel { padding: 18px; border-radius: 22px; }
+      .profile-summary { grid-template-columns: 1fr; }
+      .profile-photo { width: 96px; height: 96px; }
+      .avatar-lg { width: 96px; height: 96px; }
+      .header-copy h2 { font-size: 24px; }
+      .stats { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="brand">
+        <small>Candidate Portal</small>
+        <h1>Pontis Careers</h1>
+        <p>Your private dashboard for profile tracking, resume management, submissions, interviews, notifications, and documents.</p>
+      </div>
+
+      <div class="mini-profile">
+        {% if profile.profile_picture %}
+          <img class="avatar" src="{{ profile.profile_picture }}" alt="Profile picture" />
+        {% else %}
+          <div class="avatar-fallback avatar">{{ (profile.name or profile.email or 'C')[:1] | upper }}</div>
+        {% endif %}
+        <div>
+          <strong>{{ profile.name or 'Candidate' }}</strong>
+          <span>{{ profile.email }}</span>
+        </div>
+      </div>
+
+      <nav class="nav" id="nav">
+        <button class="active" data-target="overview"><span class="dot"></span>Dashboard</button>
+        <button data-target="profile"><span class="dot"></span>My Profile</button>
+        <button data-target="resume"><span class="dot"></span>Resume</button>
+        <button data-target="status"><span class="dot"></span>Profile Status</button>
+        <button data-target="jobs"><span class="dot"></span>Jobs Submitted</button>
+        <button data-target="interviews"><span class="dot"></span>Interviews</button>
+        <button data-target="notifications"><span class="dot"></span>Notifications</button>
+        <button data-target="documents"><span class="dot"></span>Documents</button>
+      </nav>
+
+      <div class="sidebar-footer">
+        <strong style="display:block; color: var(--text); margin-bottom: 6px;">Protected by Google sign-in</strong>
+        You can only see and update your own candidate record. Logging out ends the active session.
+      </div>
+    </aside>
+
+    <main class="content">
+      <div class="topbar">
+        <div class="topbar-card">
+          <div class="header-copy">
+            <h2>Welcome back, {{ profile.name or 'Candidate' }}</h2>
+            <p>Thank you for registering. Our recruitment team is actively searching for matching opportunities and submitting your profile to clients.</p>
+          </div>
+          <div style="display:flex; align-items:center; gap:12px; flex-wrap: wrap; justify-content: flex-end;">
+            <div class="header-user">
+              {% if profile.profile_picture %}
+                <img class="avatar" src="{{ profile.profile_picture }}" alt="Profile picture" />
+              {% else %}
+                <div class="avatar-fallback avatar">{{ (profile.name or profile.email or 'C')[:1] | upper }}</div>
+              {% endif %}
+              <div>
+                <strong>{{ profile.name or 'Candidate' }}</strong>
+                <span>{{ profile.email }}</span>
+              </div>
+            </div>
+            <a class="signout" href="/auth/logout">Logout</a>
+          </div>
+        </div>
+      </div>
+
+      <section class="section active" id="overview">
+        <div class="card">
+          <div class="card-head">
+            <div>
+              <h3>Dashboard</h3>
+              <p>Your candidate profile, submission progress, and recruiter activity at a glance.</p>
+            </div>
+            <span class="meta-pill">ATS-style overview</span>
+          </div>
+
+          <div class="hero-card">
+            <div class="hero-panel">
+              <h3>Profile first, then marketing</h3>
+              <p>We use your authenticated Google account to keep your candidate record private and consistent across every login.</p>
+              <div class="stats">
+                <div class="stat">
+                  <strong>{{ summary.applications_submitted }}</strong>
+                  <span>Jobs submitted by our team</span>
+                </div>
+                <div class="stat">
+                  <strong>{{ summary.interview_scheduled }}</strong>
+                  <span>Interview scheduled</span>
+                </div>
+                <div class="stat">
+                  <strong>{{ documents|length }}</strong>
+                  <span>Documents available</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="side-panel">
+              <div style="display:flex; gap:16px; align-items:center; margin-bottom: 12px;">
+                {% if profile.profile_picture %}
+                  <img class="avatar-lg profile-photo" src="{{ profile.profile_picture }}" alt="Profile picture" />
+                {% else %}
+                  <div class="avatar-fallback avatar-lg profile-photo">{{ (profile.name or profile.email or 'C')[:1] | upper }}</div>
+                {% endif %}
+                <div>
+                  <div class="profile-name">{{ profile.name or 'Candidate' }}</div>
+                  <div class="muted">{{ profile.email }}</div>
+                  <div class="muted" style="margin-top: 8px;">Google account linked</div>
+                </div>
+              </div>
+              <div class="tag-row">
+                {% if profile.skills %}
+                  {% for skill in profile.skills[:5] %}
+                    <span class="tag">{{ skill }}</span>
+                  {% endfor %}
+                {% else %}
+                  <span class="muted">Skills will appear after resume parsing.</span>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="profile">
+        <div class="grid cards-2">
+          <div class="card">
+            <div class="card-head">
+              <div>
+                <h3>My Profile</h3>
+                <p>Google identity, contact details, and candidate preferences.</p>
+              </div>
+              <span class="meta-pill">Candidate only</span>
+            </div>
+            <div class="profile-summary">
+              {% if profile.profile_picture %}
+                <img class="avatar-lg profile-photo" src="{{ profile.profile_picture }}" alt="Profile picture" />
+              {% else %}
+                <div class="avatar-fallback avatar-lg profile-photo">{{ (profile.name or profile.email or 'C')[:1] | upper }}</div>
+              {% endif %}
+              <div class="profile-details">
+                <div class="profile-row"><span>Full name</span><span>{{ profile.name or 'Not provided' }}</span></div>
+                <div class="profile-row"><span>Email</span><span>{{ profile.email }}</span></div>
+                <div class="profile-row"><span>Phone</span><span>{{ profile.phone or 'Not provided' }}</span></div>
+                <div class="profile-row"><span>LinkedIn</span><span>{{ profile.linkedin_url or 'Not provided' }}</span></div>
+                <div class="profile-row"><span>Current location</span><span>{{ profile.current_location or 'Not provided' }}</span></div>
+                <div class="profile-row"><span>Preferred location</span><span>{{ profile.preferred_location or 'Not provided' }}</span></div>
+                <div class="profile-row"><span>Visa status</span><span>{{ profile.visa_status or 'Not provided' }}</span></div>
+                <div class="profile-row"><span>Experience</span><span>{{ profile.experience_years or 'Not provided' }}</span></div>
+                <div class="profile-row"><span>Primary skills</span><span>{{ profile.primary_skills | join(', ') if profile.primary_skills else 'Not provided' }}</span></div>
+                <div class="profile-row"><span>Secondary skills</span><span>{{ profile.secondary_skills | join(', ') if profile.secondary_skills else 'Not provided' }}</span></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-head">
+              <div>
+                <h3>Edit Profile</h3>
+                <p>Update the fields we display in your candidate dashboard.</p>
+              </div>
+            </div>
+            <form id="profile-form" enctype="multipart/form-data">
+              <div class="field-grid">
+                <div class="field">
+                  <label for="profile-phone">Phone</label>
+                  <input id="profile-phone" name="phone" type="text" inputmode="numeric" maxlength="10" value="{{ profile.phone or '' }}" />
+                </div>
+                <div class="field">
+                  <label for="profile-linkedin">LinkedIn URL</label>
+                  <input id="profile-linkedin" name="linkedin_url" type="url" value="{{ profile.linkedin_url or '' }}" placeholder="https://www.linkedin.com/in/your-profile" />
+                </div>
+                <div class="field">
+                  <label for="profile-current-location">Current Location</label>
+                  <input id="profile-current-location" name="current_location" type="text" value="{{ profile.current_location or '' }}" />
+                </div>
+                <div class="field">
+                  <label for="profile-preferred-location">Preferred Location</label>
+                  <input id="profile-preferred-location" name="preferred_location" type="text" value="{{ profile.preferred_location or '' }}" />
+                </div>
+                <div class="field">
+                  <label for="profile-visa-status">Visa Status</label>
+                  <input id="profile-visa-status" name="visa_status" type="text" value="{{ profile.visa_status or '' }}" />
+                </div>
+                <div class="field">
+                  <label for="profile-experience-years">Experience</label>
+                  <input id="profile-experience-years" name="experience_years" type="text" value="{{ profile.experience_years or '' }}" placeholder="5 years" />
+                </div>
+                <div class="field">
+                  <label for="profile-primary-skills">Primary Skills</label>
+                  <input id="profile-primary-skills" name="primary_skills" type="text" value="{{ profile.primary_skills | join(', ') if profile.primary_skills else '' }}" placeholder="Python, FastAPI, React" />
+                </div>
+                <div class="field">
+                  <label for="profile-secondary-skills">Secondary Skills</label>
+                  <input id="profile-secondary-skills" name="secondary_skills" type="text" value="{{ profile.secondary_skills | join(', ') if profile.secondary_skills else '' }}" placeholder="PostgreSQL, AWS, Docker" />
+                </div>
+                <div class="field" style="grid-column: 1 / -1;">
+                  <label for="profile-picture">Profile Picture</label>
+                  <input id="profile-picture" name="profile_picture" type="file" accept=".png,.jpg,.jpeg,.webp,.gif" />
+                </div>
+              </div>
+              <div class="actions-row">
+                <button class="button primary" type="submit">Save profile</button>
+                <span class="muted">Updates only your authenticated candidate record.</span>
+              </div>
+            </form>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="resume">
+        <div class="grid cards-2">
+          <div class="card">
+            <div class="card-head">
+              <div>
+                <h3>Resume</h3>
+                <p>Your uploaded resume file and parsing status.</p>
+              </div>
+              <span class="meta-pill">{{ "Parsed" if profile.skills else "Pending review" }}</span>
+            </div>
+
+            {% if resume %}
+              <div class="stack">
+                <div class="doc-card">
+                  <h4>{{ resume.name }}</h4>
+                  <p>Uploaded on {{ format_timestamp(resume.uploaded_at) }}</p>
+                </div>
+                <div class="tag-row">
+                  {% for skill in profile.skills[:6] %}
+                    <span class="tag">{{ skill }}</span>
+                  {% else %}
+                    <span class="muted">Skills will appear here once the resume is processed.</span>
+                  {% endfor %}
+                </div>
+                <div class="actions-row">
+                  <a class="button primary" href="{{ resume.download_url }}" target="_blank" rel="noopener">Download resume</a>
+                </div>
+              </div>
+            {% else %}
+              <div class="empty-state">Upload a resume to make it available here and power future marketing updates.</div>
+            {% endif %}
+          </div>
+
+          <div class="card">
+            <div class="card-head">
+              <div>
+                <h3>Replace Resume</h3>
+                <p>Upload a newer version anytime. The dashboard updates immediately.</p>
+              </div>
+            </div>
+            <form id="resume-form">
+              <div class="field">
+                <label for="resume-file">Resume file</label>
+                <input id="resume-file" name="resume" type="file" accept=".pdf,.doc,.docx" required />
+              </div>
+              <div class="actions-row">
+                <button class="button primary" type="submit">Upload resume</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="status">
+        <div class="card">
+          <div class="card-head">
+            <div>
+              <h3>Profile Status</h3>
+              <p>A simple progress tracker for your candidate onboarding and marketing readiness.</p>
+            </div>
+            <span class="meta-pill">Live tracker</span>
+          </div>
+          <div class="timeline">
+            {% for step in profile_status %}
+            <div class="timeline-step {% if step.done %}done{% endif %} {% if loop.last and step.done %}active{% endif %}">
+              <div class="marker"></div>
+              <div>
+                <div class="title">{{ step.label }}</div>
+                <div class="desc">
+                  {% if step.done %}
+                    Completed for the current candidate record.
+                  {% else %}
+                    Not yet completed.
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="jobs">
+        <div class="card">
+          <div class="card-head">
+            <div>
+              <h3>Jobs Submitted</h3>
+              <p>These are jobs our recruitment team submitted on your behalf.</p>
+            </div>
+            <span class="meta-pill">{{ jobs_submitted|length }} records</span>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Job Title</th>
+                  <th>Client</th>
+                  <th>Location</th>
+                  <th>Submission Date</th>
+                  <th>Current Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for job in jobs_submitted %}
+                <tr>
+                  <td>
+                    <div style="font-weight:800;">{{ job.job }}</div>
+                    <div class="muted">{{ job.experience or 'N/A' }}</div>
+                  </td>
+                  <td>{{ job.company }}</td>
+                  <td>{{ job.location }}</td>
+                  <td>{{ format_timestamp(job.applied_at) }}</td>
+                  <td><span class="{{ badge_class(job.current_status) }}">{{ job.status_label }}</span></td>
+                </tr>
+                {% else %}
+                <tr>
+                  <td colspan="5" class="muted" style="padding: 18px 0;">No job submissions have been recorded yet.</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="interviews">
+        <div class="card">
+          <div class="card-head">
+            <div>
+              <h3>Interviews</h3>
+              <p>Upcoming or historical interviews linked to your candidate record.</p>
+            </div>
+            <span class="meta-pill">{{ interviews|length }} items</span>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Time</th>
+                  <th>Client</th>
+                  <th>Interview Type</th>
+                  <th>Meeting Link</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for interview in interviews %}
+                <tr>
+                  <td>{{ format_timestamp(interview.interview_date) or 'To be scheduled' }}</td>
+                  <td>{{ interview.interview_time or 'To be confirmed' }}</td>
+                  <td>{{ interview.client or 'N/A' }}</td>
+                  <td>{{ interview.interview_type or 'Client interview' }}</td>
+                  <td>
+                    {% if interview.meeting_link %}
+                      <a class="button ghost" href="{{ interview.meeting_link }}" target="_blank" rel="noopener">Open link</a>
+                    {% else %}
+                      <span class="muted">Not shared yet</span>
+                    {% endif %}
+                  </td>
+                  <td>{{ interview.current_status or 'Scheduled' }}</td>
+                </tr>
+                {% else %}
+                <tr>
+                  <td colspan="6" class="muted" style="padding: 18px 0;">Interview updates will appear here when the team schedules them.</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="notifications">
+        <div class="card">
+          <div class="card-head">
+            <div>
+              <h3>Notifications</h3>
+              <p>Recruiter updates, shortlist messages, interview notices, and offer alerts.</p>
+            </div>
+          </div>
+          <div class="stack">
+            {% for note in notifications %}
+            <div class="notice-card">
+              <h4>{{ note.title }}</h4>
+              <p>{{ note.message }}</p>
+              <div class="muted">{{ format_timestamp(note.created_at) }}</div>
+            </div>
+            {% else %}
+            <div class="empty-state">Notifications will appear here as your candidate record progresses.</div>
+            {% endfor %}
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="documents">
+        <div class="card">
+          <div class="card-head">
+            <div>
+              <h3>Documents</h3>
+              <p>Downloadable documents for your candidate record and future offer flow.</p>
+            </div>
+            <span class="meta-pill">Secure downloads</span>
+          </div>
+          <div class="grid cards-2">
+            {% for doc in documents %}
+            <div class="doc-card">
+              <div style="display:flex; justify-content:space-between; gap:12px; align-items:flex-start;">
+                <div>
+                  <h4>{{ doc.name }}</h4>
+                  <p>{{ doc.description }}</p>
+                </div>
+                {% if doc.available %}
+                  <span class="meta-pill">Available</span>
+                {% else %}
+                  <span class="meta-pill" style="background: rgba(100,116,139,0.08); color: #475569;">Future</span>
+                {% endif %}
+              </div>
+              <div class="actions-row">
+                {% if doc.available %}
+                  <a class="button primary" href="{{ doc.download_url }}" target="_blank" rel="noopener">Download</a>
+                {% else %}
+                  <span class="button ghost" style="cursor:default; opacity:0.75;">Coming soon</span>
+                {% endif %}
+              </div>
+            </div>
+            {% else %}
+            <div class="empty-state">Documents will appear here once they are available for your candidate record.</div>
+            {% endfor %}
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const sections = [...document.querySelectorAll(".section")];
+    const navButtons = [...document.querySelectorAll("#nav button")];
+    const toast = document.getElementById("toast");
+
+    function showToast(message) {
+      toast.textContent = message;
+      toast.classList.add("show");
+      window.clearTimeout(window.__toastTimer);
+      window.__toastTimer = window.setTimeout(() => toast.classList.remove("show"), 2600);
+    }
+
+    function activate(sectionId) {
+      sections.forEach((section) => section.classList.toggle("active", section.id === sectionId));
+      navButtons.forEach((button) => button.classList.toggle("active", button.dataset.target === sectionId));
+      const target = document.getElementById(sectionId);
+      if (target) {
+        target.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    }
+
+    navButtons.forEach((button) => {
+      button.addEventListener("click", () => activate(button.dataset.target));
+    });
+
+    async function postForm(url, formData, method) {
+      const response = await fetch(url, {
+        method,
+        body: formData,
+        headers: { "Accept": "application/json" }
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(data.detail || "Request failed.");
+      }
+      return data;
+    }
+
+    const profileForm = document.getElementById("profile-form");
+    profileForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const formData = new FormData(profileForm);
+      try {
+        const data = await postForm("/candidate/profile", formData, "PUT");
+        showToast(data.detail || "Profile updated.");
+        window.setTimeout(() => window.location.reload(), 450);
+      } catch (error) {
+        showToast(error.message);
+      }
+    });
+
+    const resumeForm = document.getElementById("resume-form");
+    resumeForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const formData = new FormData(resumeForm);
+      try {
+        const data = await postForm("/candidate/resume", formData, "PUT");
+        showToast(data.detail || "Resume updated.");
+        window.setTimeout(() => window.location.reload(), 450);
+      } catch (error) {
+        showToast(error.message);
+      }
+    });
+
+    const phoneInput = document.getElementById("profile-phone");
+    if (phoneInput) {
+      phoneInput.addEventListener("input", () => {
+        phoneInput.value = phoneInput.value.replace(/[^0-9]/g, "").slice(0, 10);
+      });
+    }
+
+    window.setTimeout(() => {
+      document.body.classList.add("ready");
+    }, 180);
+  </script>
+</body>
+</html>

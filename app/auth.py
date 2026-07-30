@@ -14,7 +14,7 @@ oauth.register(
     client_kwargs={"scope": "openid email profile"},
 )
 
-_serializer = URLSafeTimedSerializer(os.environ["SESSION_SECRET"])
+_serializer = URLSafeTimedSerializer(os.getenv("SESSION_SECRET", "dev-secret-change-me"))
 
 SESSION_COOKIE = "candidate_session"
 # SESSION_MAX_AGE = 60 * 60 * 8  # 8 hours
@@ -89,7 +89,27 @@ async def auth_callback(request: Request):
         return RedirectResponse("/login")
 
     next_url = request.session.pop("next", "/")
-    response = RedirectResponse(next_url)
+    google_user = {
+        "email": user.get("email", ""),
+        "name": user.get("name", ""),
+        "picture": user.get("picture", ""),
+        "sub": user.get("sub", ""),
+    }
+    request.session["google_user"] = google_user
+
+    response_target = next_url
+    try:
+        from .portal_store import candidate_exists
+
+        if candidate_exists(google_user["email"]):
+            response_target = "/candidate-dashboard"
+        elif response_target in ("", "/"):
+            response_target = "/application"
+    except Exception:
+        if response_target in ("", "/"):
+            response_target = "/application"
+
+    response = RedirectResponse(response_target)
     response.set_cookie(
         key=SESSION_COOKIE,
         value=create_session_cookie(user["email"]),
