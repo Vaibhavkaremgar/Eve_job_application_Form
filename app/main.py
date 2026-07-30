@@ -5,6 +5,7 @@ import os
 from pathlib import Path
 
 import httpx
+from uuid import UUID
 from fastapi import FastAPI, File, Form, Request, UploadFile
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
@@ -85,6 +86,72 @@ def _image_allowed(filename: str) -> bool:
     return "." in filename and filename.rsplit(".", 1)[-1].lower() in {"png", "jpg", "jpeg", "webp", "gif"}
 
 
+def _is_uuid(value: str | None) -> bool:
+    if not value:
+        return False
+    try:
+        UUID(str(value))
+        return True
+    except (TypeError, ValueError):
+        return False
+
+
+def _extract_job_reference(data: dict[str, object], fallback_business_id: str) -> dict[str, str] | None:
+    candidates: list[dict[str, object]] = [data]
+    for key in ("job", "data", "record", "item", "result"):
+        nested = data.get(key)
+        if isinstance(nested, dict):
+            candidates.insert(0, nested)
+
+    source = candidates[0]
+    business_job_id = str(
+        source.get("business_job_id")
+        or source.get("job_code")
+        or source.get("job_number")
+        or source.get("job_id")
+        or fallback_business_id
+    ).strip()
+    internal_job_id = source.get("internal_job_id") or source.get("job_uuid") or source.get("uuid") or source.get("id") or source.get("database_id")
+    internal_job_id = str(internal_job_id).strip() if internal_job_id is not None else ""
+
+    if not _is_uuid(internal_job_id):
+        return None
+
+    return {
+        "business_job_id": business_job_id or fallback_business_id,
+        "internal_job_id": internal_job_id,
+        "job_title": str(data.get("job_title") or data.get("job") or "").strip(),
+        "company_name": str(data.get("company_name") or data.get("company") or "").strip(),
+    }
+
+
+def _resolve_job_reference(job_id: str) -> dict[str, str] | None:
+    if not job_id:
+        return None
+
+    if not DASHBOARD_BASE_URL:
+        return None
+
+    try:
+        response = httpx.get(f"{DASHBOARD_BASE_URL}/api/public/jobs/{job_id}", timeout=10)
+    except httpx.RequestError:
+        logger.warning("Could not fetch job details for job_id=%s", job_id)
+        return None
+
+    if response.status_code != 200:
+        return None
+
+    try:
+        payload = response.json()
+    except ValueError:
+        return None
+
+    if not isinstance(payload, dict):
+        return None
+
+    return _extract_job_reference(payload, job_id)
+
+
 def _is_duplicate(existing_applications: list[dict], name: str, email: str, phone: str, linkedin_url: str | None) -> bool:
     n_name = (name or "").strip().lower()
     n_email = (email or "").strip().lower()
@@ -110,39 +177,31 @@ def _job_context(job_id: str | None) -> dict[str, str]:
     if not job_id:
         return {"job_id": "", "job_title": "", "company_name": "", "job_error": ""}
 
+    reference = _resolve_job_reference(job_id)
+    if reference:
+        return {
+            "job_id": reference["business_job_id"],
+            "job_title": reference["job_title"],
+            "company_name": reference["company_name"],
+            "job_error": "",
+            "internal_job_id": reference["internal_job_id"],
+        }
+
     if not DASHBOARD_BASE_URL:
         return {
             "job_id": job_id,
             "job_title": "",
             "company_name": "",
             "job_error": "Job context is unavailable right now, but you can still complete your candidate profile.",
+            "internal_job_id": "",
         }
-
-    try:
-        response = httpx.get(f"{DASHBOARD_BASE_URL}/api/public/jobs/{job_id}", timeout=10)
-        if response.status_code == 200:
-            data = response.json()
-            return {
-                "job_id": data.get("job_id", job_id),
-                "job_title": data.get("job_title", ""),
-                "company_name": data.get("company_name", ""),
-                "job_error": "",
-            }
-        if response.status_code in (404, 410):
-            return {
-                "job_id": job_id,
-                "job_title": "",
-                "company_name": "",
-                "job_error": "This application link is no longer available, but you can still complete your candidate profile.",
-            }
-    except httpx.RequestError:
-        logger.warning("Could not fetch job details for job_id=%s", job_id)
 
     return {
         "job_id": job_id,
         "job_title": "",
         "company_name": "",
-        "job_error": "This application link is no longer available, but you can still complete your candidate profile.",
+        "job_error": "Job not found",
+        "internal_job_id": "",
     }
 
 
@@ -368,6 +427,12 @@ async def apply(
     if not job_id or not job_id.strip():
         return JSONResponse(status_code=400, content={"detail": "job_id is required"})
 
+    reference = _resolve_job_reference(job_id)
+    if not reference:
+        return JSONResponse(status_code=404, content={"detail": "Job not found"})
+
+    internal_job_id = reference["internal_job_id"]
+
     if linkedin_url and not linkedin_url.startswith("https://"):
         return JSONResponse(
             status_code=400,
@@ -386,7 +451,7 @@ async def apply(
         async with httpx.AsyncClient(timeout=10) as client:
             dup_resp = await client.get(
                 f"{DASHBOARD_BASE_URL}/api/public/applications",
-                params={"job_id": job_id},
+                params={"job_id": internal_job_id},
             )
 
         if dup_resp.status_code == 200:
@@ -397,19 +462,19 @@ async def apply(
         else:
             logger.warning(
                 "Could not fetch existing applications for duplicate check - job_id=%s status=%s",
-                job_id,
+                internal_job_id,
                 dup_resp.status_code,
             )
     except httpx.RequestError:
-        logger.warning("Duplicate check request failed - job_id=%s, proceeding without check", job_id)
+        logger.warning("Duplicate check request failed - job_id=%s, proceeding without check", internal_job_id)
 
-    logger.info("Forwarding application to Dashboard - job_id=%s email=%s name=%s", job_id, email, name)
+    logger.info("Forwarding application to Dashboard - job_id=%s email=%s name=%s", internal_job_id, email, name)
 
     files = {"resume": (resume.filename, resume_bytes, resume.content_type)}
     if cover_letter and cover_letter.filename and cover_letter_bytes is not None:
         files["cover_letter"] = (cover_letter.filename, cover_letter_bytes, cover_letter.content_type)
 
-    data = {"job_id": job_id, "name": name, "email": email, "phone": phone}
+    data = {"job_id": internal_job_id, "name": name, "email": email, "phone": phone}
     if linkedin_url:
         data["linkedin_url"] = linkedin_url
 
@@ -436,15 +501,16 @@ async def apply(
                     cover_letter_bytes=cover_letter_bytes,
                     cover_letter_name=cover_letter.filename if cover_letter and cover_letter.filename else None,
                     google_user=_current_google_user(request),
-                    job_id=job_id,
+                    job_id=internal_job_id,
+                    business_job_id=reference["business_job_id"],
                 )
             except Exception:
                 logger.exception("Failed to mirror candidate locally for %s", email)
-        logger.info("Dashboard response - status=%s job_id=%s email=%s", resp.status_code, job_id, email)
+        logger.info("Dashboard response - status=%s job_id=%s email=%s", resp.status_code, internal_job_id, email)
         return JSONResponse(status_code=resp.status_code, content=response_json)
     except httpx.TimeoutException:
-        logger.exception("Dashboard request timed out - job_id=%s email=%s", job_id, email)
+        logger.exception("Dashboard request timed out - job_id=%s email=%s", internal_job_id, email)
         return JSONResponse(status_code=504, content={"detail": "Upstream service timed out."})
     except httpx.RequestError:
-        logger.exception("Dashboard request failed - job_id=%s email=%s", job_id, email)
+        logger.exception("Dashboard request failed - job_id=%s email=%s", internal_job_id, email)
         return JSONResponse(status_code=502, content={"detail": "Could not reach upstream service."})

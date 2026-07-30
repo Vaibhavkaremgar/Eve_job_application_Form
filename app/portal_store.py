@@ -273,6 +273,15 @@ def _sort_applications(applications: list[dict[str, Any]]) -> list[dict[str, Any
     return sorted(applications, key=lambda item: item.get("applied_at", ""), reverse=True)
 
 
+def _business_job_id(application: dict[str, Any]) -> str:
+    return (
+        application.get("business_job_id")
+        or application.get("display_job_id")
+        or application.get("job_code")
+        or application.get("job_id", "")
+    )
+
+
 def _seed_candidate(email: str, google_user: dict[str, Any] | None = None) -> dict[str, Any]:
     google_user = google_user or {}
     return {
@@ -344,6 +353,7 @@ def upsert_candidate_profile(
     cover_letter_bytes: bytes | None = None,
     cover_letter_name: str | None = None,
     job_id: str | None = None,
+    business_job_id: str | None = None,
 ) -> dict[str, Any]:
     email_key = email.lower().strip()
     store = with_store()
@@ -401,6 +411,7 @@ def upsert_candidate_profile(
     if job_id is not None:
         job = get_job(job_id)
         if job:
+            job = {**job, "business_job_id": business_job_id or job.get("business_job_id") or job_id}
             _add_application(store, candidate, job, source="application-form")
         else:
             _add_application(
@@ -408,6 +419,7 @@ def upsert_candidate_profile(
                 candidate,
                 {
                     "job_id": job_id,
+                    "business_job_id": business_job_id or job_id,
                     "job": "Candidate Application",
                     "company": "Pontis",
                     "experience": "N/A",
@@ -424,6 +436,7 @@ def upsert_candidate_profile(
             candidate,
             {
                 "job_id": "candidate-onboarding",
+                "business_job_id": "candidate-onboarding",
                 "job": "Candidate Profile Submission",
                 "company": "Pontis",
                 "experience": "N/A",
@@ -447,12 +460,15 @@ def _add_application(
     source: str,
 ) -> dict[str, Any]:
     applications = candidate.setdefault("applications", [])
-    if any(item.get("job_id") == job.get("job_id") for item in applications):
-        return next(item for item in applications if item.get("job_id") == job.get("job_id"))
+    job_id = job.get("job_id")
+    business_job_id = job.get("business_job_id") or job_id
+    if any(item.get("job_id") == job_id for item in applications):
+        return next(item for item in applications if item.get("job_id") == job_id)
 
     application = {
         "id": uuid.uuid4().hex,
-        "job_id": job.get("job_id"),
+        "job_id": job_id,
+        "business_job_id": business_job_id,
         "job": job.get("job"),
         "company": job.get("company"),
         "experience": job.get("experience", ""),
@@ -559,7 +575,13 @@ def get_profile(email: str, google_user: dict[str, Any] | None = None) -> dict[s
 
 
 def get_jobs_submitted(email: str) -> list[dict[str, Any]]:
-    return list_applications(email)
+    return [
+        {
+            **application,
+            "business_job_id": _business_job_id(application),
+        }
+        for application in list_applications(email)
+    ]
 
 
 def get_interviews(email: str) -> list[dict[str, Any]]:
@@ -586,6 +608,7 @@ def get_interviews(email: str) -> list[dict[str, Any]]:
         interviews.append(
             {
                 "id": f"interview-{application.get('id')}",
+                "business_job_id": _business_job_id(application),
                 "job_title": application.get("job", ""),
                 "client": application.get("company", ""),
                 "interview_date": interview_date,

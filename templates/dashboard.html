@@ -1046,6 +1046,7 @@
                 <tr>
                   <td>
                     <div style="font-weight:800;">{{ job.job }}</div>
+                    <div class="muted">Job ID: {{ job.business_job_id or job.job_id }}</div>
                     <div class="muted">{{ job.experience or 'N/A' }}</div>
                   </td>
                   <td>{{ job.company }}</td>
@@ -1091,7 +1092,10 @@
                   <td>{{ format_timestamp(interview.interview_date) or 'To be scheduled' }}</td>
                   <td>{{ interview.interview_time or 'To be confirmed' }}</td>
                   <td>{{ interview.client or 'N/A' }}</td>
-                  <td>{{ interview.interview_type or 'Client interview' }}</td>
+                  <td>
+                    <div>{{ interview.interview_type or 'Client interview' }}</div>
+                    <div class="muted">Job ID: {{ interview.business_job_id or 'N/A' }}</div>
+                  </td>
                   <td>
                     {% if interview.meeting_link %}
                       <a class="button ghost" href="{{ interview.meeting_link }}" target="_blank" rel="noopener">Open link</a>
