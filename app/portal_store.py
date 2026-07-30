@@ -516,7 +516,7 @@ def apply_to_job(email: str, job_id: str) -> dict[str, Any]:
 
 def get_job(job_id: str) -> dict[str, Any] | None:
     for job in JOB_CATALOG:
-        if job["job_id"] == job_id:
+        if job["job_id"] == job_id or job.get("business_job_id") == job_id or job.get("id") == job_id:
             return dict(job)
     return None
 

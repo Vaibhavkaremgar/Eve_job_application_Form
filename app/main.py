@@ -106,12 +106,21 @@ def _extract_job_reference(data: dict[str, object], fallback_business_id: str) -
     source = candidates[0]
     business_job_id = str(
         source.get("business_job_id")
+        or source.get("businessJobId")
         or source.get("job_code")
         or source.get("job_number")
         or source.get("job_id")
         or fallback_business_id
     ).strip()
-    internal_job_id = source.get("internal_job_id") or source.get("job_uuid") or source.get("uuid") or source.get("id") or source.get("database_id")
+    internal_job_id = (
+        source.get("internal_job_id")
+        or source.get("internalJobId")
+        or source.get("job_uuid")
+        or source.get("jobUuid")
+        or source.get("uuid")
+        or source.get("id")
+        or source.get("database_id")
+    )
     internal_job_id = str(internal_job_id).strip() if internal_job_id is not None else ""
 
     if not _is_uuid(internal_job_id):
@@ -185,15 +194,6 @@ def _job_context(job_id: str | None) -> dict[str, str]:
             "company_name": reference["company_name"],
             "job_error": "",
             "internal_job_id": reference["internal_job_id"],
-        }
-
-    if not DASHBOARD_BASE_URL:
-        return {
-            "job_id": job_id,
-            "job_title": "",
-            "company_name": "",
-            "job_error": "Job context is unavailable right now, but you can still complete your candidate profile.",
-            "internal_job_id": "",
         }
 
     return {
