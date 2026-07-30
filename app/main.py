@@ -158,10 +158,12 @@ def _extract_job_reference(data: dict[str, object], fallback_business_id: str) -
         or data.get("uuid")
         or data.get("id")
         or data.get("database_id")
+        or business_job_id
+        or fallback_business_id
     )
     internal_job_id = str(internal_job_id).strip() if internal_job_id is not None else ""
 
-    if not _is_uuid(internal_job_id):
+    if not internal_job_id:
         return None
 
     return {
