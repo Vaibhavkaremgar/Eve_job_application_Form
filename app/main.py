@@ -96,30 +96,40 @@ def _is_uuid(value: str | None) -> bool:
         return False
 
 
-def _extract_job_reference(data: dict[str, object], fallback_business_id: str) -> dict[str, str] | None:
-    candidates: list[dict[str, object]] = [data]
-    for key in ("job", "data", "record", "item", "result"):
-        nested = data.get(key)
+def _job_payload_candidates(payload: object) -> list[dict[str, object]]:
+    if isinstance(payload, list):
+        return [item for item in payload if isinstance(item, dict)]
+
+    if not isinstance(payload, dict):
+        return []
+
+    candidates: list[dict[str, object]] = [payload]
+    for key in ("job", "data", "record", "item", "result", "results", "jobs"):
+        nested = payload.get(key)
         if isinstance(nested, dict):
             candidates.insert(0, nested)
+        elif isinstance(nested, list):
+            candidates = [item for item in nested if isinstance(item, dict)] + candidates
+    return candidates
 
-    source = candidates[0]
+
+def _extract_job_reference(data: dict[str, object], fallback_business_id: str) -> dict[str, str] | None:
     business_job_id = str(
-        source.get("business_job_id")
-        or source.get("businessJobId")
-        or source.get("job_code")
-        or source.get("job_number")
-        or source.get("job_id")
+        data.get("business_job_id")
+        or data.get("businessJobId")
+        or data.get("job_code")
+        or data.get("job_number")
+        or data.get("job_id")
         or fallback_business_id
     ).strip()
     internal_job_id = (
-        source.get("internal_job_id")
-        or source.get("internalJobId")
-        or source.get("job_uuid")
-        or source.get("jobUuid")
-        or source.get("uuid")
-        or source.get("id")
-        or source.get("database_id")
+        data.get("internal_job_id")
+        or data.get("internalJobId")
+        or data.get("job_uuid")
+        or data.get("jobUuid")
+        or data.get("uuid")
+        or data.get("id")
+        or data.get("database_id")
     )
     internal_job_id = str(internal_job_id).strip() if internal_job_id is not None else ""
 
@@ -129,36 +139,74 @@ def _extract_job_reference(data: dict[str, object], fallback_business_id: str) -
     return {
         "business_job_id": business_job_id or fallback_business_id,
         "internal_job_id": internal_job_id,
-        "job_title": str(data.get("job_title") or data.get("job") or "").strip(),
-        "company_name": str(data.get("company_name") or data.get("company") or "").strip(),
+        "job_title": str(
+            data.get("job_title")
+            or data.get("job_role")
+            or data.get("role")
+            or data.get("title")
+            or data.get("job")
+            or ""
+        ).strip(),
+        "company_name": str(data.get("company_name") or data.get("company") or data.get("client") or "").strip(),
     }
 
 
 def _resolve_job_reference(job_id: str) -> dict[str, str] | None:
+    job_id = str(job_id or "").strip()
     if not job_id:
         return None
 
+    logger.info("Received job_id from URL/form: %s", job_id)
+    logger.info("Job lookup query: Job.job_id = %s", job_id)
+
     if not DASHBOARD_BASE_URL:
+        logger.warning("DASHBOARD_BASE_URL is not configured; unable to resolve job_id=%s", job_id)
         return None
 
-    try:
-        response = httpx.get(f"{DASHBOARD_BASE_URL}/api/public/jobs/{job_id}", timeout=10)
-    except httpx.RequestError:
-        logger.warning("Could not fetch job details for job_id=%s", job_id)
-        return None
+    lookup_attempts = [
+        ("query-param", f"{DASHBOARD_BASE_URL}/api/public/jobs", {"job_id": job_id}),
+        ("legacy-path", f"{DASHBOARD_BASE_URL}/api/public/jobs/{job_id}", None),
+    ]
 
-    if response.status_code != 200:
-        return None
+    for lookup_type, url, params in lookup_attempts:
+        logger.info(
+            "Executing job lookup request - source=%s url=%s params=%s",
+            lookup_type,
+            url,
+            params or {},
+        )
+        try:
+            response = httpx.get(url, params=params, timeout=10)
+        except httpx.RequestError:
+            logger.warning("Could not fetch job details - source=%s job_id=%s", lookup_type, job_id)
+            continue
 
-    try:
-        payload = response.json()
-    except ValueError:
-        return None
+        logger.info("Job lookup response - source=%s status=%s", lookup_type, response.status_code)
+        if response.status_code != 200:
+            continue
 
-    if not isinstance(payload, dict):
-        return None
+        try:
+            payload = response.json()
+        except ValueError:
+            logger.warning("Job lookup response was not valid JSON - source=%s job_id=%s", lookup_type, job_id)
+            continue
 
-    return _extract_job_reference(payload, job_id)
+        for candidate in _job_payload_candidates(payload):
+            reference = _extract_job_reference(candidate, job_id)
+            if reference and reference["business_job_id"] == job_id:
+                logger.info(
+                    "Matching job found - business_job_id=%s internal_job_id=%s job_title=%s company_name=%s",
+                    reference["business_job_id"],
+                    reference["internal_job_id"],
+                    reference["job_title"],
+                    reference["company_name"],
+                )
+                return reference
+
+        logger.info("No matching job found in %s response for job_id=%s", lookup_type, job_id)
+
+    logger.warning("No matching job found for job_id=%s", job_id)
+    return None
 
 
 def _is_duplicate(existing_applications: list[dict], name: str, email: str, phone: str, linkedin_url: str | None) -> bool:
@@ -186,6 +234,7 @@ def _job_context(job_id: str | None) -> dict[str, str]:
     if not job_id:
         return {"job_id": "", "job_title": "", "company_name": "", "job_error": ""}
 
+    logger.info("Building application form context for job_id=%s", job_id)
     reference = _resolve_job_reference(job_id)
     if reference:
         return {

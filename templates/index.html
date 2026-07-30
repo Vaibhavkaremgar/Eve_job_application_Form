@@ -131,13 +131,13 @@
         <div class="logout"><a href="/auth/logout">Sign out</a></div>
         {% if job_error %}
         <div class="error-box">
-            <h2>Job Not Available</h2>
+            <h2>Job not found</h2>
             <p>{{ job_error }}</p>
         </div>
         {% else %}
         <form id="applicationForm" action="/apply" method="POST" enctype="multipart/form-data">
             <h2>Job Application Form</h2>
-         <label>Business Job ID:</label>
+         <label>Job Id:</label>
          <input type="text" value="{{ job_id }}" readonly><br><br>
          <label>Job Title:</label>
          <input type="text" value="{{ job_title }}" readonly><br><br>
