@@ -99,6 +99,7 @@ router = APIRouter()
 
 @router.get("/auth/login")
 async def login(request: Request):
+    print("Existing Redirect:", request.session.get(SESSION_REDIRECT_KEY))
     redirect_uri = "https://eve.pontis.one/auth/callback"
     if request.session.get(SESSION_REDIRECT_KEY) is None:
         next_url = request.query_params.get("next")
@@ -157,20 +158,43 @@ async def auth_callback(request: Request):
         # elif response_target in ("", "/"):
         #     response_target = "/application"
 
+        # if job_id:
+        #    if has_applied_to_job(google_user["email"], job_id):
+        #     response_target = "/candidate-dashboard"
+        #    else:
+        #      response_target = next_url
+
+        # elif has_applications:
+        #  response_target = "/candidate-dashboard"
+
+        # elif response_target in ("", "/"):
+        #  response_target = "/application"
         if job_id:
-           if has_applied_to_job(google_user["email"], job_id):
-            response_target = "/candidate-dashboard"
-           else:
-             response_target = next_url
+            already_applied = has_applied_to_job(google_user["email"], job_id)
+            print("Already applied:", already_applied)
+
+            if already_applied:
+                response_target = "/candidate-dashboard"
+            else:
+               response_target = next_url
 
         elif has_applications:
-         response_target = "/candidate-dashboard"
+          response_target = "/candidate-dashboard"
 
         elif response_target in ("", "/"):
-         response_target = "/application"
-    except Exception:
-        if response_target in ("", "/"):
             response_target = "/application"
+
+        print("FINAL REDIRECT:", response_target)
+
+    # except Exception:
+    #     if response_target in ("", "/"):
+    #         response_target = "/application"
+
+    except Exception as e:
+     print("AUTH CALLBACK ERROR:", repr(e))
+
+    if response_target in ("", "/"):
+        response_target = "/application"
 
     response = RedirectResponse(response_target)
     response.set_cookie(
@@ -184,8 +208,16 @@ async def auth_callback(request: Request):
     return response
 
 
+# @router.get("/auth/logout")
+# def logout():
+#     response = RedirectResponse("/login")
+#     response.delete_cookie(SESSION_COOKIE)
+#     return response
+
 @router.get("/auth/logout")
-def logout():
+def logout(request: Request):
+    request.session.clear()
+
     response = RedirectResponse("/login")
     response.delete_cookie(SESSION_COOKIE)
     return response
