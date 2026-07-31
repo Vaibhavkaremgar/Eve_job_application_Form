@@ -31,6 +31,7 @@ from .portal_store import (
     get_notifications,
     get_profile,
     get_resume,
+    list_applications,
     upsert_candidate_profile,
 )
 
@@ -75,6 +76,10 @@ def _require_email(request: Request) -> str | None:
     if is_session_expired(request):
         return None
     return email
+
+
+def _candidate_has_applications(email: str) -> bool:
+    return bool(list_applications(email))
 
 
 def _redirect_login(request: Request) -> RedirectResponse:
@@ -309,13 +314,14 @@ async def home(request: Request):
             target += f"?job_id={job_id}"
         return RedirectResponse(f"/login?next={target}", status_code=303)
 
-    if candidate_exists(email):
+    job_id = request.query_params.get("job_id")
+    if job_id:
+        return RedirectResponse(f"/application?job_id={job_id}", status_code=303)
+
+    if candidate_exists(email) and _candidate_has_applications(email):
         return RedirectResponse("/candidate-dashboard", status_code=303)
 
-    job_id = request.query_params.get("job_id")
     target = "/application"
-    if job_id:
-        target += f"?job_id={job_id}"
     return RedirectResponse(target, status_code=303)
 
 
@@ -326,10 +332,10 @@ def application_page(request: Request):
         return _redirect_login(request)
 
     google_user = _current_google_user(request) or {}
-    if candidate_exists(email):
+    job_id = request.query_params.get("job_id")
+    if not job_id and candidate_exists(email) and _candidate_has_applications(email):
         return RedirectResponse("/candidate-dashboard", status_code=303)
 
-    job_id = request.query_params.get("job_id")
     context = _job_context(job_id)
     profile = get_profile(email, google_user)
     return templates.TemplateResponse(

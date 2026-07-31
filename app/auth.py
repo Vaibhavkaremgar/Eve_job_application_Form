@@ -1,4 +1,5 @@
 import os
+from urllib.parse import parse_qs, urlparse
 from authlib.integrations.starlette_client import OAuth
 from starlette.config import Config
 from fastapi import APIRouter, Request
@@ -68,6 +69,23 @@ def store_redirect_target(request: Request, target: str | None = None) -> str:
     redirect_target = target or get_redirect_target(request)
     request.session[SESSION_REDIRECT_KEY] = redirect_target
     return redirect_target
+
+
+def _target_job_id(target: str | None) -> str:
+    if not target:
+        return ""
+
+    parsed = urlparse(target)
+    if parsed.path.rstrip("/") != "/application":
+        return ""
+
+    return parse_qs(parsed.query).get("job_id", [""])[0].strip()
+
+
+def _candidate_has_applications(email: str) -> bool:
+    from .portal_store import list_applications
+
+    return bool(list_applications(email))
         
 
 
@@ -117,7 +135,12 @@ async def auth_callback(request: Request):
     try:
         from .portal_store import candidate_exists
 
-        if candidate_exists(google_user["email"]):
+        job_id = _target_job_id(next_url)
+        has_applications = candidate_exists(google_user["email"]) and _candidate_has_applications(google_user["email"])
+
+        if job_id:
+            response_target = next_url
+        elif has_applications:
             response_target = "/candidate-dashboard"
         elif response_target in ("", "/"):
             response_target = "/application"
