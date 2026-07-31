@@ -354,9 +354,10 @@
 
     .stats {
       display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
+      grid-template-columns: repeat(6, minmax(0, 1fr));
       gap: 14px;
       margin-top: 18px;
+      align-items: stretch;
     }
 
     .stat {
@@ -364,19 +365,48 @@
       border-radius: 20px;
       background: rgba(255,255,255,0.9);
       border: 1px solid rgba(148, 163, 184, 0.14);
+      box-shadow: 0 14px 30px rgba(15, 23, 42, 0.06);
+      min-height: 176px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 10px;
+      transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+      overflow: hidden;
+    }
+
+    .stat:hover {
+      transform: translateY(-3px);
+      border-color: rgba(37, 99, 235, 0.24);
+      box-shadow: 0 20px 36px rgba(37, 99, 235, 0.12);
+    }
+
+    .stat-title {
+      display: block;
+      color: var(--blue);
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      line-height: 1.45;
     }
 
     .stat strong {
       display: block;
-      font-size: 26px;
-      color: var(--blue);
-      margin-bottom: 6px;
+      font-size: 28px;
+      color: var(--text);
+      letter-spacing: -0.05em;
+      line-height: 1.05;
     }
 
-    .stat span {
+    .stat-desc {
       color: var(--muted);
       font-size: 13px;
       line-height: 1.5;
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
     }
 
     .profile-summary {
@@ -711,7 +741,7 @@
       to { opacity: 1; }
     }
 
-    @media (max-width: 1180px) {
+    @media (max-width: 1199px) {
       .layout { grid-template-columns: 1fr; }
       .sidebar { position: relative; height: auto; }
       .summary-list,
@@ -719,6 +749,7 @@
       .cards-2,
       .field-grid,
       .hero-card { grid-template-columns: 1fr; }
+      .stats { grid-template-columns: repeat(3, minmax(0, 1fr)); }
       .topbar { flex-direction: column; align-items: stretch; }
       .header-user { min-width: 0; }
     }
@@ -730,7 +761,8 @@
       .profile-photo { width: 96px; height: 96px; }
       .avatar-lg { width: 96px; height: 96px; }
       .header-copy h2 { font-size: 24px; }
-      .stats { grid-template-columns: 1fr; }
+      .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .stat { min-height: 160px; }
     }
   </style>
 </head>
@@ -812,16 +844,34 @@
               <p>We use your authenticated Google account to keep your candidate record private and consistent across every login.</p>
               <div class="stats">
                 <div class="stat">
-                  <strong>{{ summary.applications_submitted }}</strong>
-                  <span>Jobs submitted by our team</span>
+                  <span class="stat-title">Matching Jobs</span>
+                  <strong>{{ kpis.matching_jobs }}</strong>
+                  <span class="stat-desc">Jobs that match your profile based on your skills, experience, preferred role and location.</span>
                 </div>
                 <div class="stat">
-                  <strong>{{ summary.interview_scheduled }}</strong>
-                  <span>Interview scheduled</span>
+                  <span class="stat-title">Applications Submitted</span>
+                  <strong>{{ kpis.applications_submitted }}</strong>
+                  <span class="stat-desc">Total number of jobs you have applied for through the platform.</span>
                 </div>
                 <div class="stat">
-                  <strong>{{ documents|length }}</strong>
-                  <span>Documents available</span>
+                  <span class="stat-title">Applications In Progress</span>
+                  <strong>{{ kpis.applications_in_progress }}</strong>
+                  <span class="stat-desc">Applications currently in the recruitment process. Includes Applied, Resume Reviewed, Shortlisted, Interview Scheduled, and Interview Completed.</span>
+                </div>
+                <div class="stat">
+                  <span class="stat-title">Upcoming Interviews</span>
+                  <strong>{{ kpis.upcoming_interviews }}</strong>
+                  <span class="stat-desc">Number of interviews scheduled for future dates.</span>
+                </div>
+                <div class="stat">
+                  <span class="stat-title">Documents Uploaded</span>
+                  <strong>{{ kpis.documents_uploaded }}</strong>
+                  <span class="stat-desc">Documents available in your profile, including resume, cover letter, certificates, portfolio, and other supporting files.</span>
+                </div>
+                <div class="stat">
+                  <span class="stat-title">Active Applications</span>
+                  <strong>{{ kpis.active_applications }}</strong>
+                  <span class="stat-desc">Applications that are still active. Excludes Rejected, Withdrawn, and Closed statuses.</span>
                 </div>
               </div>
             </div>

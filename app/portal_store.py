@@ -140,6 +140,20 @@ STATUS_META = {
     "Rejected": {"tone": "rose", "label": "Rejected"},
 }
 
+IN_PROGRESS_STATUSES = {
+    "Applied",
+    "Resume Reviewed",
+    "Shortlisted",
+    "Interview Scheduled",
+    "Interview Completed",
+}
+
+FINAL_APPLICATION_STATUSES = {
+    "Rejected",
+    "Withdrawn",
+    "Closed",
+}
+
 _LOCK = threading.Lock()
 
 
@@ -724,6 +738,145 @@ def get_summary(email: str) -> dict[str, int]:
     return summary
 
 
+def _parse_datetime(value: Any) -> datetime | None:
+    if not isinstance(value, str) or not value.strip():
+        return None
+    try:
+        return datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+
+
+def _candidate_documents(candidate: dict[str, Any]) -> list[dict[str, Any]]:
+    documents: list[dict[str, Any]] = []
+    for key in ("resume", "cover_letter"):
+        document = candidate.get(key)
+        if isinstance(document, dict):
+            documents.append(document)
+
+    extra_documents = candidate.get("documents")
+    if isinstance(extra_documents, list):
+        for document in extra_documents:
+            if isinstance(document, dict):
+                documents.append(document)
+
+    return documents
+
+
+def _count_uploaded_documents(candidate: dict[str, Any]) -> int:
+    seen: set[str] = set()
+    total = 0
+    for document in _candidate_documents(candidate):
+        unique_key = (
+            str(document.get("download_url") or document.get("path") or document.get("stored_name") or document.get("id") or document.get("name") or "").strip()
+        )
+        if not unique_key or unique_key in seen:
+            continue
+        if not (document.get("download_url") or document.get("path") or document.get("stored_name")):
+            continue
+        seen.add(unique_key)
+        total += 1
+    return total
+
+
+def _count_matching_jobs(email: str) -> int:
+    candidate = get_candidate(email) or {}
+    profile = get_profile(email)
+
+    skills = {
+        str(skill).strip().lower()
+        for skill in candidate.get("skills", [])
+        if isinstance(skill, str) and skill.strip()
+    }
+    skills.update(
+        str(skill).strip().lower()
+        for skill in candidate.get("primary_skills", [])
+        if isinstance(skill, str) and skill.strip()
+    )
+    skills.update(
+        str(skill).strip().lower()
+        for skill in candidate.get("secondary_skills", [])
+        if isinstance(skill, str) and skill.strip()
+    )
+
+    preferred_location = str(profile.get("preferred_location", "") or "").strip().lower()
+    matched = 0
+
+    for job in JOB_CATALOG:
+        job_skills = {
+            str(skill).strip().lower()
+            for skill in job.get("skills", [])
+            if isinstance(skill, str) and skill.strip()
+        }
+        score = len(skills.intersection(job_skills))
+        if preferred_location and preferred_location in str(job.get("location", "")).lower():
+            score += 1
+        if score > 0:
+            matched += 1
+
+    return matched
+
+
+def _count_upcoming_interviews(email: str) -> int:
+    now = datetime.now(timezone.utc)
+    total = 0
+
+    for interview in get_interviews(email):
+        status = str(interview.get("current_status", "") or "")
+        if status != "Interview Scheduled":
+            continue
+        interview_date = _parse_datetime(interview.get("interview_date"))
+        if interview_date is None or interview_date > now:
+            total += 1
+
+    return total
+
+
+def _count_applications_by_status(email: str, *, allowed: set[str], excluded: set[str] | None = None) -> int:
+    excluded = excluded or set()
+    total = 0
+    for application in list_applications(email):
+        status = str(application.get("current_status", "Applied") or "Applied")
+        if status in excluded:
+            continue
+        if status in allowed:
+            total += 1
+    return total
+
+
+def _count_active_applications(email: str) -> int:
+    total = 0
+    for application in list_applications(email):
+        status = str(application.get("current_status", "Applied") or "Applied")
+        if status not in FINAL_APPLICATION_STATUSES:
+            total += 1
+    return total
+
+
+def get_kpi_summary(email: str) -> dict[str, int]:
+    applications = list_applications(email)
+    candidate = get_candidate(email) or {}
+
+    # TODO: Source these KPI values from dedicated backend analytics APIs if/when they become available.
+    # matching_jobs -> candidate matching analytics endpoint
+    # applications_submitted -> applications list endpoint
+    # applications_in_progress -> application status aggregation endpoint
+    # upcoming_interviews -> interviews endpoint
+    # documents_uploaded -> documents/profile files endpoint
+    # active_applications -> active application status aggregation endpoint
+    return {
+        "matching_jobs": _count_matching_jobs(email),
+        "applications_submitted": len(applications),
+        "applications_in_progress": _count_applications_by_status(
+            email,
+            allowed=IN_PROGRESS_STATUSES,
+        ),
+        "upcoming_interviews": _count_upcoming_interviews(email),
+        "documents_uploaded": _count_uploaded_documents(candidate),
+        "active_applications": _count_active_applications(email),
+    }
+
+
 def get_recommended_jobs(email: str) -> list[dict[str, Any]]:
     candidate = get_candidate(email)
     if not candidate:
@@ -814,6 +967,7 @@ def dashboard_payload(email: str, google_user: dict[str, Any] | None = None) -> 
     return {
         "profile": profile,
         "summary": get_summary(email),
+        "kpis": get_kpi_summary(email),
         "jobs_submitted": get_jobs_submitted(email),
         "applications": list_applications(email),
         "resume": get_resume(email),
