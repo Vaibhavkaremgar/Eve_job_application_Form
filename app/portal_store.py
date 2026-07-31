@@ -213,8 +213,16 @@ def save_store(store: dict[str, Any]) -> None:
         _write_store(store)
 
 
+# def get_candidate(email: str) -> dict[str, Any] | None:
+#     store = with_store()
+#     return store.get("candidates", {}).get(email.lower().strip())
+
 def get_candidate(email: str) -> dict[str, Any] | None:
     store = with_store()
+
+    print("Candidate lookup:", email.lower().strip())
+    print("Candidate keys:", list(store.get("candidates", {}).keys())[:20])
+
     return store.get("candidates", {}).get(email.lower().strip())
 
 
