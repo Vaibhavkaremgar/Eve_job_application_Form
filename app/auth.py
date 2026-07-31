@@ -133,7 +133,8 @@ async def auth_callback(request: Request):
 
     response_target = next_url
     try:
-        from .portal_store import candidate_exists
+        # from .portal_store import candidate_exists
+        from .portal_store import candidate_exists, has_applied_to_job
 
         job_id = _target_job_id(next_url)
         has_applications = candidate_exists(google_user["email"]) and _candidate_has_applications(google_user["email"])
@@ -149,12 +150,24 @@ async def auth_callback(request: Request):
 
         print("=========================================")
 
+        # if job_id:
+        #     response_target = next_url
+        # elif has_applications:
+        #     response_target = "/candidate-dashboard"
+        # elif response_target in ("", "/"):
+        #     response_target = "/application"
+
         if job_id:
-            response_target = next_url
-        elif has_applications:
+           if has_applied_to_job(google_user["email"], job_id):
             response_target = "/candidate-dashboard"
+           else:
+             response_target = next_url
+
+        elif has_applications:
+         response_target = "/candidate-dashboard"
+
         elif response_target in ("", "/"):
-            response_target = "/application"
+         response_target = "/application"
     except Exception:
         if response_target in ("", "/"):
             response_target = "/application"

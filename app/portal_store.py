@@ -535,6 +535,13 @@ def list_applications(email: str) -> list[dict[str, Any]]:
         for application in applications
     ]
 
+def has_applied_to_job(email: str, business_job_id: str) -> bool:
+    applications = list_applications(email)
+
+    return any(
+        application.get("business_job_id") == business_job_id
+        for application in applications
+    )
 
 def get_resume(email: str) -> dict[str, Any] | None:
     candidate = get_candidate(email)
