@@ -137,6 +137,17 @@ async def auth_callback(request: Request):
 
         job_id = _target_job_id(next_url)
         has_applications = candidate_exists(google_user["email"]) and _candidate_has_applications(google_user["email"])
+        print("========== LOGIN REDIRECT DEBUG ==========")
+        print("Email:", google_user["email"])
+        print("Next URL:", next_url)
+        print("Job ID:", job_id)
+        print("Candidate Exists:", candidate_exists(google_user["email"]))
+        print("Has Applications:", has_applications)
+
+        from .portal_store import list_applications
+        print("Applications:", list_applications(google_user["email"]))
+
+        print("=========================================")
 
         if job_id:
             response_target = next_url
