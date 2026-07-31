@@ -182,21 +182,32 @@ def _ensure_dirs() -> None:
 
 def _read_store() -> dict[str, Any]:
     _ensure_dirs()
+    print("STORE PATH:", STORE_PATH)
+    print("STORE EXISTS:", STORE_PATH.exists())
+
     if not STORE_PATH.exists():
+        print("STORE FILE NOT FOUND")
         return _default_store()
     try:
         with STORE_PATH.open("r", encoding="utf-8") as handle:
             data = json.load(handle)
+            print("STORE CANDIDATE COUNT:", len(data.get("candidates", {})))
         if not isinstance(data, dict):
             return _default_store()
         data.setdefault("candidates", {})
         return data
     except json.JSONDecodeError:
+        print("STORE JSON DECODE ERROR")
         return _default_store()
 
 
 def _write_store(store: dict[str, Any]) -> None:
     _ensure_dirs()
+    print("========== SAVING STORE ==========")
+    print("SAVING STORE TO:", STORE_PATH)
+    print("CANDIDATE COUNT:", len(store.get("candidates", {})))
+    print("CANDIDATE KEYS:", list(store.get("candidates", {}).keys())[:10])
+    print("==================================")
     temp_path = STORE_PATH.with_suffix(".tmp")
     with temp_path.open("w", encoding="utf-8") as handle:
         json.dump(store, handle, indent=2, ensure_ascii=True)
