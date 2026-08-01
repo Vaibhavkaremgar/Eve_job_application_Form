@@ -388,6 +388,8 @@ def upsert_candidate_profile(
     job_id: str | None = None,
     business_job_id: str | None = None,
 ) -> dict[str, Any]:
+    print("========== UPSERT CANDIDATE PROFILE ==========")
+    print("Email:", email)
     email_key = email.lower().strip()
     store = with_store()
     candidate = store["candidates"].get(email_key) or _seed_candidate(email_key, google_user)
@@ -480,8 +482,12 @@ def upsert_candidate_profile(
             },
             source="application-form",
         )
+        print("ABOUT TO CALL save_store()")
+        print("Candidate Count:", len(store["candidates"]))
+        print("Candidate Keys:", list(store["candidates"].keys())[:10])
 
     save_store(store)
+    print("save_store() COMPLETED")
     return candidate
 
 

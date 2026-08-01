@@ -582,6 +582,7 @@ async def apply(
             response_json.setdefault("dashboard_url", "/candidate-dashboard")
         if resp.status_code < 400:
             try:
+                print("CALLING upsert_candidate_profile")
                 upsert_candidate_profile(
                     email,
                     name=name,
@@ -595,6 +596,7 @@ async def apply(
                     job_id=internal_job_id,
                     business_job_id=reference["business_job_id"],
                 )
+                print("upsert_candidate_profile COMPLETED")
             except Exception:
                 logger.exception("Failed to mirror candidate locally for %s", email)
         logger.info("Dashboard response - status=%s job_id=%s email=%s", resp.status_code, internal_job_id, email)
