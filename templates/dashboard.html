@@ -325,7 +325,7 @@
 
     .hero-card {
       display: grid;
-      grid-template-columns: 1.15fr 0.85fr;
+      grid-template-columns: 1fr;
       gap: 18px;
       align-items: stretch;
     }
@@ -354,25 +354,28 @@
 
     .stats {
       display: grid;
-      grid-template-columns: repeat(6, minmax(0, 1fr));
-      gap: 14px;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 16px;
       margin-top: 18px;
       align-items: stretch;
     }
 
     .stat {
-      padding: 16px;
-      border-radius: 20px;
-      background: rgba(255,255,255,0.9);
-      border: 1px solid rgba(148, 163, 184, 0.14);
-      box-shadow: 0 14px 30px rgba(15, 23, 42, 0.06);
-      min-height: 176px;
+      padding: 18px 18px 20px;
+      border-radius: 22px;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248, 251, 255, 0.94));
+      border: 1px solid rgba(148, 163, 184, 0.16);
+      box-shadow: 0 14px 32px rgba(15, 23, 42, 0.06);
+      min-height: 198px;
       display: flex;
       flex-direction: column;
-      justify-content: space-between;
-      gap: 10px;
+      justify-content: flex-start;
+      gap: 12px;
       transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
       overflow: hidden;
+      position: relative;
+      height: 100%;
     }
 
     .stat:hover {
@@ -381,19 +384,28 @@
       box-shadow: 0 20px 36px rgba(37, 99, 235, 0.12);
     }
 
+    .stat::before {
+      content: "";
+      position: absolute;
+      inset: 0 0 auto;
+      height: 4px;
+      background: linear-gradient(90deg, var(--blue), #60a5fa);
+    }
+
     .stat-title {
       display: block;
       color: var(--blue);
-      font-size: 12px;
+      font-size: 11px;
       font-weight: 800;
       letter-spacing: 0.08em;
       text-transform: uppercase;
-      line-height: 1.45;
+      line-height: 1.5;
+      padding-top: 6px;
     }
 
     .stat strong {
       display: block;
-      font-size: 28px;
+      font-size: 32px;
       color: var(--text);
       letter-spacing: -0.05em;
       line-height: 1.05;
@@ -402,11 +414,9 @@
     .stat-desc {
       color: var(--muted);
       font-size: 13px;
-      line-height: 1.5;
-      display: -webkit-box;
-      -webkit-line-clamp: 3;
-      -webkit-box-orient: vertical;
-      overflow: hidden;
+      line-height: 1.6;
+      overflow: visible;
+      margin-top: auto;
     }
 
     .profile-summary {
@@ -749,7 +759,7 @@
       .cards-2,
       .field-grid,
       .hero-card { grid-template-columns: 1fr; }
-      .stats { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .topbar { flex-direction: column; align-items: stretch; }
       .header-user { min-width: 0; }
     }
@@ -761,8 +771,8 @@
       .profile-photo { width: 96px; height: 96px; }
       .avatar-lg { width: 96px; height: 96px; }
       .header-copy h2 { font-size: 24px; }
-      .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-      .stat { min-height: 160px; }
+      .stats { grid-template-columns: 1fr; }
+      .stat { min-height: 180px; }
     }
   </style>
 </head>
@@ -793,7 +803,6 @@
         <button data-target="resume"><span class="dot"></span>Resume</button>
         <button data-target="status"><span class="dot"></span>Profile Status</button>
         <button data-target="jobs"><span class="dot"></span>Jobs Submitted</button>
-        <button data-target="interviews"><span class="dot"></span>Interviews</button>
         <button data-target="notifications"><span class="dot"></span>Notifications</button>
         <button data-target="documents"><span class="dot"></span>Documents</button>
       </nav>
@@ -873,30 +882,6 @@
                   <strong>{{ kpis.active_applications }}</strong>
                   <span class="stat-desc">Applications that are still active. Excludes Rejected, Withdrawn, and Closed statuses.</span>
                 </div>
-              </div>
-            </div>
-
-            <div class="side-panel">
-              <div style="display:flex; gap:16px; align-items:center; margin-bottom: 12px;">
-                {% if profile.profile_picture %}
-                  <img class="avatar-lg profile-photo" src="{{ profile.profile_picture }}" alt="Profile picture" />
-                {% else %}
-                  <div class="avatar-fallback avatar-lg profile-photo">{{ (profile.name or profile.email or 'C')[:1] | upper }}</div>
-                {% endif %}
-                <div>
-                  <div class="profile-name">{{ profile.name or 'Candidate' }}</div>
-                  <div class="muted">{{ profile.email }}</div>
-                  <div class="muted" style="margin-top: 8px;">Google account linked</div>
-                </div>
-              </div>
-              <div class="tag-row">
-                {% if profile.skills %}
-                  {% for skill in profile.skills[:5] %}
-                    <span class="tag">{{ skill }}</span>
-                  {% endfor %}
-                {% else %}
-                  <span class="muted">Skills will appear after resume parsing.</span>
-                {% endif %}
               </div>
             </div>
           </div>
@@ -1107,57 +1092,6 @@
                 {% else %}
                 <tr>
                   <td colspan="5" class="muted" style="padding: 18px 0;">No job submissions have been recorded yet.</td>
-                </tr>
-                {% endfor %}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </section>
-
-      <section class="section" id="interviews">
-        <div class="card">
-          <div class="card-head">
-            <div>
-              <h3>Interviews</h3>
-              <p>Upcoming or historical interviews linked to your candidate record.</p>
-            </div>
-            <span class="meta-pill">{{ interviews|length }} items</span>
-          </div>
-          <div class="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Date</th>
-                  <th>Time</th>
-                  <th>Client</th>
-                  <th>Interview Type</th>
-                  <th>Meeting Link</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {% for interview in interviews %}
-                <tr>
-                  <td>{{ format_timestamp(interview.interview_date) or 'To be scheduled' }}</td>
-                  <td>{{ interview.interview_time or 'To be confirmed' }}</td>
-                  <td>{{ interview.client or 'N/A' }}</td>
-                  <td>
-                    <div>{{ interview.interview_type or 'Client interview' }}</div>
-                    <div class="muted">Job ID: {{ interview.business_job_id or 'N/A' }}</div>
-                  </td>
-                  <td>
-                    {% if interview.meeting_link %}
-                      <a class="button ghost" href="{{ interview.meeting_link }}" target="_blank" rel="noopener">Open link</a>
-                    {% else %}
-                      <span class="muted">Not shared yet</span>
-                    {% endif %}
-                  </td>
-                  <td>{{ interview.current_status or 'Scheduled' }}</td>
-                </tr>
-                {% else %}
-                <tr>
-                  <td colspan="6" class="muted" style="padding: 18px 0;">Interview updates will appear here when the team schedules them.</td>
                 </tr>
                 {% endfor %}
               </tbody>
