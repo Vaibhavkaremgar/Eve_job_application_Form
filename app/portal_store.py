@@ -241,6 +241,153 @@ def candidate_exists(email: str) -> bool:
     return get_candidate(email) is not None
 
 
+def _dashboard_candidate_sources(payload: object) -> list[dict[str, Any]]:
+    if isinstance(payload, list):
+        sources: list[dict[str, Any]] = []
+        for item in payload:
+            sources.extend(_dashboard_candidate_sources(item))
+        return sources
+
+    if not isinstance(payload, dict):
+        return []
+
+    sources: list[dict[str, Any]] = [payload]
+    for key in ("candidate", "profile", "data", "result", "item", "user"):
+        value = payload.get(key)
+        if isinstance(value, (dict, list)):
+            sources.extend(_dashboard_candidate_sources(value))
+
+    for value in payload.values():
+        if isinstance(value, (dict, list)):
+            sources.extend(_dashboard_candidate_sources(value))
+
+    seen: set[int] = set()
+    unique_sources: list[dict[str, Any]] = []
+    for source in sources:
+        marker = id(source)
+        if marker in seen:
+            continue
+        seen.add(marker)
+        unique_sources.append(source)
+    return unique_sources
+
+
+def _coerce_string_list(value: Any) -> list[str]:
+    if isinstance(value, str):
+        return [item.strip() for item in value.split(",") if item.strip()]
+    if isinstance(value, list):
+        return [str(item).strip() for item in value if str(item).strip()]
+    return []
+
+
+def _snapshot_from_dashboard_response(email: str, dashboard_response: object) -> dict[str, Any] | None:
+    email_key = email.lower().strip()
+    for source in _dashboard_candidate_sources(dashboard_response):
+        source_email = str(source.get("email", "")).strip().lower()
+        if source_email == email_key:
+            return source
+
+        profile = source.get("profile")
+        if isinstance(profile, dict):
+            profile_email = str(profile.get("email", "")).strip().lower()
+            if profile_email == email_key:
+                return {**source, **profile}
+
+    return None
+
+
+def hydrate_candidate_from_dashboard(
+    email: str,
+    dashboard_response: object,
+    google_user: dict[str, Any] | None = None,
+) -> dict[str, Any] | None:
+    snapshot = _snapshot_from_dashboard_response(email, dashboard_response)
+    if snapshot is None:
+        return None
+
+    email_key = email.lower().strip()
+    google_user = google_user or {}
+    store = with_store()
+    candidate = store["candidates"].get(email_key) or _seed_candidate(email_key, google_user)
+
+    profile = snapshot.get("profile")
+    profile_data = profile if isinstance(profile, dict) else {}
+
+    candidate["email"] = email_key
+    candidate["name"] = (
+        str(profile_data.get("name") or snapshot.get("name") or google_user.get("name") or candidate.get("name") or "")
+        .strip()
+    )
+    candidate["phone"] = str(profile_data.get("phone") or snapshot.get("phone") or candidate.get("phone") or "").strip()
+    candidate["linkedin_url"] = str(
+        profile_data.get("linkedin_url") or snapshot.get("linkedin_url") or candidate.get("linkedin_url") or ""
+    ).strip()
+    candidate["current_location"] = str(
+        profile_data.get("current_location") or snapshot.get("current_location") or candidate.get("current_location") or ""
+    ).strip()
+    candidate["preferred_location"] = str(
+        profile_data.get("preferred_location") or snapshot.get("preferred_location") or candidate.get("preferred_location") or ""
+    ).strip()
+    candidate["visa_status"] = str(profile_data.get("visa_status") or snapshot.get("visa_status") or candidate.get("visa_status") or "").strip()
+    candidate["experience_years"] = str(
+        profile_data.get("experience_years") or snapshot.get("experience_years") or candidate.get("experience_years") or ""
+    ).strip()
+
+    primary_skills = profile_data.get("primary_skills") if profile_data else snapshot.get("primary_skills")
+    secondary_skills = profile_data.get("secondary_skills") if profile_data else snapshot.get("secondary_skills")
+    if primary_skills is not None:
+        candidate["primary_skills"] = _coerce_string_list(primary_skills)
+    if secondary_skills is not None:
+        candidate["secondary_skills"] = _coerce_string_list(secondary_skills)
+
+    profile_picture = profile_data.get("profile_picture") or snapshot.get("profile_picture")
+    if profile_picture is not None:
+        candidate["profile_picture"] = profile_picture
+    google_picture = profile_data.get("google_picture") or snapshot.get("google_picture") or google_user.get("picture", "")
+    if google_picture is not None:
+        candidate["google_picture"] = google_picture
+
+    resume = snapshot.get("resume")
+    if resume is None and isinstance(profile_data.get("resume"), dict):
+        resume = profile_data.get("resume")
+    if isinstance(resume, dict):
+        candidate["resume"] = resume
+
+    resume_text = snapshot.get("resume_text") or profile_data.get("resume_text")
+    if isinstance(resume_text, str):
+        candidate["resume_text"] = resume_text
+
+    skills = snapshot.get("skills") or profile_data.get("skills")
+    if skills is not None:
+        candidate["skills"] = _coerce_string_list(skills)
+
+    applications = snapshot.get("applications")
+    if not isinstance(applications, list):
+        applications = snapshot.get("jobs_submitted")
+    if not isinstance(applications, list) and isinstance(profile_data.get("applications"), list):
+        applications = profile_data.get("applications")
+    if isinstance(applications, list):
+        candidate["applications"] = applications
+
+    interviews = snapshot.get("interviews")
+    if isinstance(interviews, list):
+        candidate["interviews"] = interviews
+
+    documents = snapshot.get("documents")
+    if isinstance(documents, list):
+        candidate["documents"] = documents
+
+    notifications = snapshot.get("notifications")
+    if isinstance(notifications, list):
+        candidate["notifications"] = notifications
+
+    candidate["updated_at"] = _now()
+    candidate["last_login_at"] = _now()
+    store["candidates"][email_key] = candidate
+    save_store(store)
+    return candidate
+
+
 def _extract_resume_text(file_name: str, file_bytes: bytes) -> str:
     text = file_bytes.decode("utf-8", errors="ignore")
     text = re.sub(r"\s+", " ", text)

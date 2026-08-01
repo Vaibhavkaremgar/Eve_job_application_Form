@@ -1,5 +1,7 @@
 import os
-from urllib.parse import parse_qs, urlparse
+from urllib.parse import quote, urlparse
+
+import httpx
 from authlib.integrations.starlette_client import OAuth
 from starlette.config import Config
 from fastapi import APIRouter, Request
@@ -16,6 +18,7 @@ oauth.register(
 )
 
 _serializer = URLSafeTimedSerializer(os.getenv("SESSION_SECRET", "dev-secret-change-me"))
+DASHBOARD_BASE_URL = os.getenv("DASHBOARD_BASE_URL", "")
 
 SESSION_COOKIE = "candidate_session"
 SESSION_REDIRECT_KEY = "post_auth_redirect"
@@ -71,21 +74,46 @@ def store_redirect_target(request: Request, target: str | None = None) -> str:
     return redirect_target
 
 
-def _target_job_id(target: str | None) -> str:
+def _application_redirect_target(target: str | None) -> str:
     if not target:
-        return ""
+        return "/application"
 
     parsed = urlparse(target)
-    if parsed.path.rstrip("/") != "/application":
-        return ""
+    if parsed.path.rstrip("/") == "/application":
+        return target
 
-    return parse_qs(parsed.query).get("job_id", [""])[0].strip()
+    return "/application"
 
 
-def _candidate_has_applications(email: str) -> bool:
-    from .portal_store import list_applications
+def _dashboard_candidate_lookup(email: str) -> dict | None:
+    if not DASHBOARD_BASE_URL:
+        return None
 
-    return bool(list_applications(email))
+    lookup_attempts = [
+        ("query-param", f"{DASHBOARD_BASE_URL}/api/public/candidates", {"email": email}),
+        ("legacy-path", f"{DASHBOARD_BASE_URL}/api/public/candidates/{quote(email, safe='')}", None),
+    ]
+
+    for _, url, params in lookup_attempts:
+        try:
+            response = httpx.get(url, params=params, timeout=10)
+        except httpx.RequestError:
+            continue
+
+        if response.status_code == 404:
+            continue
+        if response.status_code != 200:
+            continue
+
+        try:
+            payload = response.json()
+        except ValueError:
+            continue
+
+        if response.status_code == 200:
+            return payload
+
+    return None
         
 
 
@@ -132,66 +160,33 @@ async def auth_callback(request: Request):
     }
     request.session["google_user"] = google_user
 
-    response_target = next_url
+    response_target = next_url or "/application"
     try:
-        # from .portal_store import candidate_exists
-        from .portal_store import candidate_exists, has_applied_to_job
+        from .portal_store import get_candidate, hydrate_candidate_from_dashboard
 
-        job_id = _target_job_id(next_url)
-        has_applications = candidate_exists(google_user["email"]) and _candidate_has_applications(google_user["email"])
+        email = google_user["email"]
+        local_candidate = get_candidate(email)
         print("========== LOGIN REDIRECT DEBUG ==========")
-        print("Email:", google_user["email"])
+        print("Email:", email)
         print("Next URL:", next_url)
-        print("Job ID:", job_id)
-        print("Candidate Exists:", candidate_exists(google_user["email"]))
-        print("Has Applications:", has_applications)
-
-        from .portal_store import list_applications
-        print("Applications:", list_applications(google_user["email"]))
+        print("Local Candidate Found:", bool(local_candidate))
 
         print("=========================================")
 
-        # if job_id:
-        #     response_target = next_url
-        # elif has_applications:
-        #     response_target = "/candidate-dashboard"
-        # elif response_target in ("", "/"):
-        #     response_target = "/application"
-
-        # if job_id:
-        #    if has_applied_to_job(google_user["email"], job_id):
-        #     response_target = "/candidate-dashboard"
-        #    else:
-        #      response_target = next_url
-
-        # elif has_applications:
-        #  response_target = "/candidate-dashboard"
-
-        # elif response_target in ("", "/"):
-        #  response_target = "/application"
-        if job_id:
-            already_applied = has_applied_to_job(google_user["email"], job_id)
-            print("Already applied:", already_applied)
-
-            if already_applied:
+        if local_candidate:
+            response_target = "/candidate-dashboard"
+        else:
+            dashboard_response = _dashboard_candidate_lookup(email)
+            print("Dashboard Response Found:", bool(dashboard_response))
+            if dashboard_response is not None and hydrate_candidate_from_dashboard(email, dashboard_response, google_user):
                 response_target = "/candidate-dashboard"
             else:
-               response_target = next_url
-
-        elif has_applications:
-          response_target = "/candidate-dashboard"
-
-        elif response_target in ("", "/"):
-            response_target = "/application"
+                response_target = _application_redirect_target(next_url)
 
         print("FINAL REDIRECT:", response_target)
 
-    # except Exception:
-    #     if response_target in ("", "/"):
-    #         response_target = "/application"
-
     except Exception as e:
-     print("AUTH CALLBACK ERROR:", repr(e))
+        print("AUTH CALLBACK ERROR:", repr(e))
 
     if response_target in ("", "/"):
         response_target = "/application"
