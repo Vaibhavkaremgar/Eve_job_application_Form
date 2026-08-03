@@ -600,6 +600,11 @@ async def apply(
             except Exception:
                 logger.exception("Failed to mirror candidate locally for %s", email)
         logger.info("Dashboard response - status=%s job_id=%s email=%s", resp.status_code, internal_job_id, email)
+        logger.info(
+    "Returning success response to frontend - email=%s status=%s",
+    email,
+    resp.status_code,
+)
         return JSONResponse(status_code=resp.status_code, content=response_json)
     except httpx.TimeoutException:
         logger.exception("Dashboard request timed out - job_id=%s email=%s", internal_job_id, email)
