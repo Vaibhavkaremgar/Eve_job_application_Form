@@ -25,6 +25,7 @@ from .portal_store import (
     dashboard_payload,
     format_timestamp,
     get_application_badge_class,
+    get_candidate,
     get_documents,
     get_interviews,
     get_jobs_submitted,
@@ -356,6 +357,12 @@ def candidate_dashboard_page(request: Request):
         return _redirect_login(request)
 
     google_user = _current_google_user(request) or {}
+    print("========== CANDIDATE DASHBOARD ==========")
+    print("Dashboard email:", email)
+    print("Candidate exists:", candidate_exists(email))
+    candidate = get_candidate(email)
+    print("Candidate:", candidate)
+    print("========================================")
     if not candidate_exists(email):
         return RedirectResponse("/application", status_code=303)
 
