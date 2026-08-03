@@ -89,31 +89,27 @@ def _dashboard_candidate_lookup(email: str) -> dict | None:
     if not DASHBOARD_BASE_URL:
         return None
 
-    lookup_attempts = [
-        ("query-param", f"{DASHBOARD_BASE_URL}/api/public/candidates", {"email": email}),
-        ("legacy-path", f"{DASHBOARD_BASE_URL}/api/public/candidates/{quote(email, safe='')}", None),
-    ]
+    request_url = f"{DASHBOARD_BASE_URL}/api/public/candidate?email={quote(email, safe='')}"
+    print("DASHBOARD CANDIDATE LOOKUP URL:", request_url)
 
-    for _, url, params in lookup_attempts:
-        try:
-            response = httpx.get(url, params=params, timeout=10)
-        except httpx.RequestError:
-            continue
+    try:
+        response = httpx.get(request_url, timeout=10)
+    except httpx.RequestError as exc:
+        print("DASHBOARD CANDIDATE LOOKUP REQUEST ERROR:", repr(exc))
+        return None
 
-        if response.status_code == 404:
-            continue
-        if response.status_code != 200:
-            continue
+    print("DASHBOARD CANDIDATE LOOKUP STATUS:", response.status_code)
+    print("DASHBOARD CANDIDATE LOOKUP BODY:", response.text)
 
-        try:
-            payload = response.json()
-        except ValueError:
-            continue
+    if response.status_code != 200:
+        return None
 
-        if response.status_code == 200:
-            return payload
+    try:
+        payload = response.json()
+    except ValueError:
+        return None
 
-    return None
+    return payload
         
 
 
