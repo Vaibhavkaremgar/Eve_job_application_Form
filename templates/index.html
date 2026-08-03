@@ -1,128 +1,273 @@
 <!DOCTYPE html>
 <html>
     <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Job Application Form</title>
         <style>
+        :root {
+            --page-bg: #faf9f6;
+            --ink: #0f172a;
+            --muted: #475569;
+            --line: rgba(15, 23, 42, 0.10);
+            --line-strong: rgba(15, 23, 42, 0.14);
+            --field-bg: rgba(255, 255, 255, 0.72);
+            --field-bg-disabled: rgba(255, 255, 255, 0.55);
+            --focus-ring: rgba(45, 120, 255, 0.24);
+            --teal-1: #18b6a8;
+            --teal-2: #0f9e90;
+        }
+
         body {
-            font-family: Arial, sans-serif;
+            font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
             display: flex;
             align-items: center;
             justify-content: center;
             position: relative;
             min-height: 100vh;
             margin: 0;
-            padding: 24px 16px;
-            /* background: #f6f9ff url("/static/background.png") center top / cover no-repeat fixed; */
-            background-image: url("/static/background.png");
-            background-repeat: no-repeat;
-            background-position: center center;
-            /* background-size: cover; */
-            background-size: 100% 100%;
-            background-attachment: scroll;
-            background-color: #f6f9ff;
+            padding: 48px 20px;
+            background:
+                radial-gradient(circle at 50% 18%, rgba(24, 182, 168, 0.10), transparent 34%),
+                radial-gradient(circle at 50% 0%, rgba(15, 23, 42, 0.04), transparent 28%),
+                linear-gradient(180deg, rgba(250, 249, 246, 0.98), rgba(250, 249, 246, 0.98)),
+                var(--page-bg);
             overflow-x: hidden;
             isolation: isolate;
         }
 
+        body::before {
+            content: "";
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            background-image:
+                radial-gradient(rgba(15, 23, 42, 0.045) 1px, transparent 1px);
+            background-size: 24px 24px;
+            opacity: 0.55;
+            mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.65), rgba(0, 0, 0, 0.45) 60%, rgba(0, 0, 0, 0.22));
+            -webkit-mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.65), rgba(0, 0, 0, 0.45) 60%, rgba(0, 0, 0, 0.22));
+            z-index: -2;
+        }
+
+        body::after {
+            content: "";
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            background:
+                radial-gradient(circle at 50% 42%, rgba(24, 182, 168, 0.09), transparent 28%),
+                radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.52), transparent 60%);
+            z-index: -1;
+        }
+
         form {
-            width: min(460px, calc(100vw - 32px));
+            width: min(650px, calc(100vw - 40px));
             margin: 0;
-            padding: 18px 20px;
-            background: white;
-            border-radius: 10px;
-            box-shadow: 0px 0px 10px gray;
+            padding: 44px 48px 46px;
+            background: rgba(255, 255, 255, 0.78);
+            border: 1px solid rgba(255, 255, 255, 0.55);
+            border-radius: 24px;
+            box-shadow: 0 20px 60px rgba(15, 23, 42, 0.08);
+            backdrop-filter: blur(22px);
+            -webkit-backdrop-filter: blur(22px);
+            color: var(--ink);
         }
 
         h2 {
+            margin: 0 0 28px;
             text-align: center;
-            color: #007BFF;
+            color: var(--ink);
+            font-size: 40px;
+            line-height: 1.08;
+            font-weight: 700;
+            letter-spacing: -0.03em;
         }
 
-        label {
-            font-weight: bold;
-            color: #333;
+        form label,
+        .error-box label {
+            display: block;
+            margin: 0 0 8px;
+            font-weight: 600;
+            font-size: 15px;
+            line-height: 1.35;
+            color: #1e293b;
         }
 
-        input[type="text"],
-        input[type="email"],
-        input[type="url"],
-        input[type="file"] {
+        form input[type="text"],
+        form input[type="email"],
+        form input[type="url"],
+        form input[type="file"] {
             width: 100%;
-            padding: 8px;
-            margin-top: 5px;
-            margin-bottom: 15px;
-            border: 1px solid #999;
-            border-radius: 5px;
+            min-height: 52px;
+            padding: 14px 16px;
+            margin: 0 0 18px;
+            border: 1px solid rgba(15, 23, 42, 0.12);
+            border-radius: 16px;
             box-sizing: border-box;
+            background: var(--field-bg);
+            color: var(--ink);
+            font-size: 16px;
+            line-height: 1.4;
+            font-family: inherit;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55);
+            transition:
+                border-color 180ms ease,
+                box-shadow 180ms ease,
+                background-color 180ms ease,
+                transform 180ms ease;
         }
 
-        input:focus {
-            border-color: blue;
+        form input[type="file"] {
+            padding-top: 13px;
+            padding-bottom: 13px;
+        }
+
+        form input::placeholder {
+            color: #94a3b8;
+        }
+
+        form input:hover {
+            border-color: rgba(15, 23, 42, 0.18);
+            background: rgba(255, 255, 255, 0.82);
+        }
+
+        form input:focus {
+            border-color: rgba(37, 99, 235, 0.55);
             outline: none;
-            box-shadow: 0 0 5px lightblue;
+            box-shadow: 0 0 0 4px var(--focus-ring);
+            background: rgba(255, 255, 255, 0.92);
         }
 
-        input[readonly] {
-            background-color: #e9ecef;
-            color: #555;
+        form input[readonly],
+        form input[disabled] {
+            background: var(--field-bg-disabled);
+            color: #475569;
             cursor: default;
+        }
+
+        form input[readonly]:hover,
+        form input[disabled]:hover {
+            border-color: rgba(15, 23, 42, 0.12);
+            background: var(--field-bg-disabled);
         }
 
         input[type="submit"] {
             width: 100%;
-            padding: 10px;
-            background: #007BFF;
+            min-height: 54px;
+            margin-top: 6px;
+            padding: 0 18px;
+            background: linear-gradient(135deg, var(--teal-1), var(--teal-2));
             color: white;
             border: none;
-            border-radius: 5px;
-            font-size: 17px;
+            border-radius: 14px;
+            font-size: 16px;
+            font-weight: 700;
+            letter-spacing: 0.01em;
             cursor: pointer;
+            box-shadow: 0 14px 28px rgba(15, 158, 144, 0.24);
+            transition:
+                transform 180ms ease,
+                box-shadow 180ms ease,
+                filter 180ms ease;
         }
 
         input[type="submit"]:hover {
-            background: #0056b3;
+            transform: translateY(-1px);
+            box-shadow: 0 18px 34px rgba(15, 158, 144, 0.28);
+            filter: brightness(1.02);
+        }
+
+        input[type="submit"]:active {
+            transform: translateY(0);
+            box-shadow: 0 10px 22px rgba(15, 158, 144, 0.22);
+        }
+
+        input[type="submit"]:focus {
+            outline: none;
+            box-shadow: 0 0 0 4px rgba(24, 182, 168, 0.24), 0 14px 28px rgba(15, 158, 144, 0.24);
         }
 
         .logout {
             position: absolute;
-            top: 16px;
-            right: 16px;
+            top: 20px;
+            right: 20px;
             display: block;
             text-align: right;
             margin: 0;
             width: auto;
             font-size: 13px;
-            color: #888;
+            color: #64748b;
+            z-index: 1;
         }
-        .logout a { color: #007BFF; text-decoration: none; }
+        .logout a {
+            color: #0f766e;
+            text-decoration: none;
+            font-weight: 600;
+        }
         .logout a:hover { text-decoration: underline; }
 
         .error-box {
-            width: min(460px, calc(100vw - 32px));
+            width: min(650px, calc(100vw - 40px));
             margin: 0;
-            padding: 30px 20px;
-            background: white;
-            border-radius: 10px;
-            box-shadow: 0px 0px 10px gray;
+            padding: 44px 48px 46px;
+            background: rgba(255, 255, 255, 0.78);
+            border: 1px solid rgba(255, 255, 255, 0.55);
+            border-radius: 24px;
+            box-shadow: 0 20px 60px rgba(15, 23, 42, 0.08);
+            backdrop-filter: blur(22px);
+            -webkit-backdrop-filter: blur(22px);
             text-align: center;
-            color: #555;
+            color: var(--muted);
         }
-        .error-box h2 { color: #dc3545; margin-bottom: 10px; }
+        .error-box h2 {
+            color: #0f172a;
+            margin-bottom: 10px;
+        }
 
         @media (max-width: 520px) {
             body {
-                padding: 16px 12px;
-                background-attachment: scroll;
+                padding: 20px 12px;
             }
 
             .logout {
-                top: 12px;
-                right: 12px;
+                top: 14px;
+                right: 14px;
             }
 
             form,
             .error-box {
                 width: 100%;
+                padding: 28px 18px 22px;
+                border-radius: 20px;
+            }
+
+            h2 {
+                font-size: 28px;
+                margin-bottom: 22px;
+            }
+
+            form input[type="text"],
+            form input[type="email"],
+            form input[type="url"],
+            form input[type="file"] {
+                min-height: 50px;
+                border-radius: 14px;
+            }
+
+            input[type="submit"] {
+                min-height: 52px;
+            }
+        }
+
+        @media (min-width: 521px) and (max-width: 900px) {
+            form,
+            .error-box {
+                padding: 38px 34px 34px;
+            }
+
+            h2 {
+                font-size: 34px;
             }
         }
     </style>
