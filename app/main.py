@@ -173,6 +173,12 @@ def _extract_job_reference(data: dict[str, object], fallback_business_id: str) -
 
     if not internal_job_id:
         return None
+    print("========== _extract_job_reference ==========")
+    print("Input data:", data)
+    print("title:", data.get("title"))
+    print("job_title:", data.get("job_title"))
+    print("company_name:", data.get("company_name"))
+    print("===========================================")
 
     return {
         "business_job_id": business_job_id or fallback_business_id,
@@ -197,8 +203,8 @@ def _resolve_job_reference(job_id: str) -> dict[str, str] | None:
     if not job_id:
         return None
 
-    print("========== JOB LOOKUP ==========")
-    print("Incoming job_id:", job_id)
+    logger.info("Received job_id from URL/form: %s", job_id)
+    logger.info("Job lookup query: Job.job_id = %s", job_id)
 
     if not DASHBOARD_BASE_URL:
         logger.warning("DASHBOARD_BASE_URL is not configured; unable to resolve job_id=%s", job_id)
@@ -210,22 +216,24 @@ def _resolve_job_reference(job_id: str) -> dict[str, str] | None:
     ]
 
     for lookup_type, url, params in lookup_attempts:
-        print("Lookup Type:", lookup_type)
-        print("Dashboard URL:", url)
-        print("Params:", params)
+        logger.info(
+            "Executing job lookup request - source=%s url=%s params=%s",
+            lookup_type,
+            url,
+            params or {},
+        )
         try:
             response = httpx.get(url, params=params, timeout=10)
         except httpx.RequestError:
             logger.warning("Could not fetch job details - source=%s job_id=%s", lookup_type, job_id)
             continue
 
-        print("Response Status:", response.status_code)
-        print("Final Request URL:", response.request.url)
+        logger.info("Job lookup response - source=%s status=%s", lookup_type, response.status_code)
         if response.status_code != 200:
             continue
 
-        print("Response Body:")
-        print(response.text)
+        logger.info("Job lookup request URL - source=%s url=%s", lookup_type, response.request.url)
+        logger.info("Job lookup response body - source=%s body=%s", lookup_type, response.text)
 
         try:
             payload = response.json()
@@ -233,22 +241,32 @@ def _resolve_job_reference(job_id: str) -> dict[str, str] | None:
             logger.warning("Job lookup response was not valid JSON - source=%s job_id=%s", lookup_type, job_id)
             continue
 
-        print("Parsed JSON:")
-        print(payload)
-
         for candidate in _job_payload_candidates(payload):
+            print("================================")
+            print("CANDIDATE PASSED TO _extract_job_reference")
+            print(candidate)
+            print("================================")
             reference = _extract_job_reference(candidate, job_id)
-            print("Candidate Reference:")
-            print(reference)
+            if reference:
+                logger.info(
+                    "Parsed job reference - source=%s business_job_id=%s internal_job_id=%s job_title=%s company_name=%s",
+                    lookup_type,
+                    reference["business_job_id"],
+                    reference["internal_job_id"],
+                    reference["job_title"],
+                    reference["company_name"],
+                )
             if reference and reference["business_job_id"] == job_id:
-                print("MATCH FOUND")
-                print("Business Job ID:", reference["business_job_id"])
-                print("Internal Job ID:", reference["internal_job_id"])
-                print("Job Title:", reference["job_title"])
-                print("Company Name:", reference["company_name"])
+                logger.info(
+                    "Matching job found - business_job_id=%s internal_job_id=%s job_title=%s company_name=%s",
+                    reference["business_job_id"],
+                    reference["internal_job_id"],
+                    reference["job_title"],
+                    reference["company_name"],
+                )
                 return reference
 
-        print("NO MATCH FOUND FOR:", job_id)
+        logger.info("No matching job found in %s response for job_id=%s", lookup_type, job_id)
 
     logger.warning("No matching job found for job_id=%s", job_id)
     return None
@@ -367,6 +385,7 @@ def candidate_dashboard_page(request: Request):
     print("Dashboard email:", email)
     print("Candidate exists:", candidate_exists(email))
     candidate = get_candidate(email)
+
     print("Candidate:", candidate)
     print("========================================")
     if not candidate_exists(email):
