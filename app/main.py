@@ -240,8 +240,18 @@ def _resolve_job_reference(job_id: str) -> dict[str, str] | None:
         except ValueError:
             logger.warning("Job lookup response was not valid JSON - source=%s job_id=%s", lookup_type, job_id)
             continue
+        candidates = _job_payload_candidates(payload)
+        print("====================================")
+        print("TOTAL CANDIDATES:", len(candidates))
 
-        for candidate in _job_payload_candidates(payload):
+        for index, item in enumerate(candidates):
+          print(f"CANDIDATE {index}:")
+          print(item)
+
+          print("====================================")
+
+        # for candidate in _job_payload_candidates(payload):
+        for candidate in candidates:
             print("================================")
             print("CANDIDATE PASSED TO _extract_job_reference")
             print(candidate)
