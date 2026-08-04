@@ -3,116 +3,318 @@
     <head>
         <title>Job Application Form</title>
         <style>
+        :root {
+            --bg: #f4ede3;
+            --bg-soft: #fbf7f1;
+            --card: rgba(255, 250, 244, 0.9);
+            --card-border: rgba(72, 54, 35, 0.12);
+            --text: #241d16;
+            --muted: #74675b;
+            --line: rgba(90, 70, 49, 0.14);
+            --field-bg: rgba(255, 255, 255, 0.78);
+            --field-focus: #2f241c;
+            --shadow: 0 24px 70px rgba(58, 40, 24, 0.14);
+            --button: #171717;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
         body {
-            font-family: Arial, sans-serif;
+            margin: 0;
+            min-height: 100vh;
+            min-height: 100svh;
+            padding: 32px 18px;
             display: flex;
             align-items: center;
             justify-content: center;
-            position: relative;
-            min-height: 100vh;
-            margin: 0;
-            padding: 24px 16px;
-            /* background: #f6f9ff url("/static/background.png") center top / cover no-repeat fixed; */
-            background-image: url("/static/background.png");
-            background-repeat: no-repeat;
-            background-position: center center;
-            /* background-size: cover; */
-            background-size: 100% 100%;
-            background-attachment: scroll;
-            background-color: #f6f9ff;
             overflow-x: hidden;
+            color: var(--text);
+            font-family: "Inter", "Segoe UI", Arial, sans-serif;
+            background:
+                radial-gradient(circle at 12% 14%, rgba(255, 255, 255, 0.72), transparent 30%),
+                radial-gradient(circle at 85% 16%, rgba(215, 187, 155, 0.36), transparent 28%),
+                radial-gradient(circle at 18% 84%, rgba(198, 164, 126, 0.24), transparent 26%),
+                radial-gradient(circle at 82% 76%, rgba(255, 255, 255, 0.5), transparent 24%),
+                linear-gradient(145deg, #f7efe4 0%, #efe3d0 40%, #f8f3ea 100%);
+            position: relative;
             isolation: isolate;
         }
 
-        form {
-            width: min(460px, calc(100vw - 32px));
+        body::before,
+        body::after {
+            content: "";
+            position: fixed;
+            inset: auto;
+            width: 38vw;
+            height: 38vw;
+            border-radius: 50%;
+            filter: blur(14px);
+            pointer-events: none;
+            z-index: -1;
+            opacity: 0.85;
+        }
+
+        body::before {
+            top: -12vw;
+            left: -10vw;
+            background: radial-gradient(circle, rgba(255, 255, 255, 0.82) 0%, rgba(246, 230, 210, 0.36) 42%, transparent 72%);
+        }
+
+        body::after {
+            right: -14vw;
+            bottom: -18vw;
+            background: radial-gradient(circle, rgba(205, 172, 135, 0.4) 0%, rgba(205, 172, 135, 0.14) 40%, transparent 72%);
+        }
+
+        form,
+        .error-box {
+            width: min(920px, calc(100vw - 32px));
             margin: 0;
-            padding: 18px 20px;
-            background: white;
-            border-radius: 10px;
-            box-shadow: 0px 0px 10px gray;
+            border-radius: 26px;
+            border: 1px solid var(--card-border);
+            box-shadow: var(--shadow);
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
+        }
+
+        form {
+            padding: 34px;
+            background: linear-gradient(180deg, rgba(255, 251, 247, 0.95), rgba(250, 244, 237, 0.9));
+        }
+
+        .form-shell {
+            width: 100%;
+        }
+
+        .form-head {
+            margin-bottom: 28px;
+        }
+
+        .eyebrow {
+            margin: 0 0 14px;
+            font-size: 11px;
+            letter-spacing: 0.28em;
+            text-transform: uppercase;
+            color: var(--muted);
+            font-weight: 600;
         }
 
         h2 {
-            text-align: center;
-            color: #007BFF;
+            margin: 0;
+            color: var(--text);
+            font-family: Georgia, "Times New Roman", serif;
+            font-size: clamp(2.2rem, 4vw, 3.8rem);
+            line-height: 1.03;
+            font-weight: 500;
+            letter-spacing: -0.03em;
+        }
+
+        .subtitle {
+            margin: 12px 0 0;
+            max-width: 56ch;
+            color: var(--muted);
+            font-size: 0.98rem;
+            line-height: 1.6;
+        }
+
+        .form-grid {
+            display: grid;
+            gap: 18px 18px;
+        }
+
+        .two-col {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .field {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .field.full {
+            grid-column: 1 / -1;
         }
 
         label {
-            font-weight: bold;
-            color: #333;
+            font-size: 0.92rem;
+            line-height: 1.35;
+            color: var(--muted);
+            font-weight: 500;
         }
 
         input[type="text"],
         input[type="email"],
-        input[type="url"],
-        input[type="file"] {
+        input[type="url"] {
             width: 100%;
-            padding: 8px;
-            margin-top: 5px;
-            margin-bottom: 15px;
-            border: 1px solid #999;
-            border-radius: 5px;
-            box-sizing: border-box;
+            height: 52px;
+            padding: 14px 15px;
+            border: 1px solid var(--line);
+            border-radius: 14px;
+            background: var(--field-bg);
+            color: var(--text);
+            font: inherit;
+            transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease, background 0.18s ease;
         }
 
-        input:focus {
-            border-color: blue;
+        input[type="text"]::placeholder,
+        input[type="email"]::placeholder,
+        input[type="url"]::placeholder {
+            color: rgba(116, 103, 91, 0.7);
+        }
+
+        input[type="text"]:focus,
+        input[type="email"]:focus,
+        input[type="url"]:focus {
             outline: none;
-            box-shadow: 0 0 5px lightblue;
+            border-color: rgba(47, 36, 28, 0.35);
+            box-shadow: 0 0 0 4px rgba(47, 36, 28, 0.08);
+            background: rgba(255, 255, 255, 0.94);
         }
 
         input[readonly] {
-            background-color: #e9ecef;
-            color: #555;
+            background: rgba(242, 234, 223, 0.78);
+            color: #594c40;
             cursor: default;
+        }
+
+        .upload-box {
+            position: relative;
+            display: grid;
+            gap: 8px;
+            padding: 18px;
+            min-height: 118px;
+            border: 1.5px dashed rgba(66, 50, 35, 0.24);
+            border-radius: 16px;
+            background: rgba(255, 255, 255, 0.56);
+            cursor: pointer;
+            transition: border-color 0.18s ease, background 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
+        }
+
+        .upload-box:hover,
+        .upload-box:focus-within {
+            border-color: rgba(47, 36, 28, 0.42);
+            background: rgba(255, 255, 255, 0.72);
+            box-shadow: 0 12px 30px rgba(58, 40, 24, 0.08);
+        }
+
+        .upload-title {
+            font-size: 0.95rem;
+            color: var(--text);
+            font-weight: 600;
+        }
+
+        .upload-copy {
+            margin: 0;
+            color: var(--muted);
+            font-size: 0.88rem;
+            line-height: 1.55;
+        }
+
+        input[type="file"] {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            cursor: pointer;
+        }
+
+        input[type="file"]::-webkit-file-upload-button {
+            cursor: pointer;
         }
 
         input[type="submit"] {
             width: 100%;
-            padding: 10px;
-            background: #007BFF;
-            color: white;
+            height: 56px;
             border: none;
-            border-radius: 5px;
-            font-size: 17px;
+            border-radius: 999px;
+            background: var(--button);
+            color: #fff;
+            font: inherit;
+            font-weight: 600;
+            letter-spacing: 0.02em;
             cursor: pointer;
+            transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+            box-shadow: 0 16px 30px rgba(23, 23, 23, 0.22);
         }
 
         input[type="submit"]:hover {
-            background: #0056b3;
+            transform: translateY(-1px);
+            background: #000;
+            box-shadow: 0 18px 34px rgba(23, 23, 23, 0.28);
+        }
+
+        input[type="submit"]:focus-visible {
+            outline: none;
+            box-shadow: 0 0 0 4px rgba(23, 23, 23, 0.16), 0 16px 30px rgba(23, 23, 23, 0.22);
+        }
+
+        .actions {
+            margin-top: 10px;
         }
 
         .logout {
-            position: absolute;
-            top: 16px;
-            right: 16px;
+            position: fixed;
+            top: 18px;
+            right: 18px;
             display: block;
-            text-align: right;
             margin: 0;
-            width: auto;
             font-size: 13px;
-            color: #888;
+            color: var(--muted);
+            z-index: 2;
         }
-        .logout a { color: #007BFF; text-decoration: none; }
-        .logout a:hover { text-decoration: underline; }
+
+        .logout a {
+            color: var(--text);
+            text-decoration: none;
+            border-bottom: 1px solid transparent;
+            padding-bottom: 2px;
+        }
+
+        .logout a:hover {
+            border-bottom-color: currentColor;
+        }
 
         .error-box {
-            width: min(460px, calc(100vw - 32px));
-            margin: 0;
-            padding: 30px 20px;
-            background: white;
-            border-radius: 10px;
-            box-shadow: 0px 0px 10px gray;
+            padding: 34px 28px;
             text-align: center;
-            color: #555;
+            color: var(--muted);
+            background: linear-gradient(180deg, rgba(255, 251, 247, 0.95), rgba(250, 244, 237, 0.9));
         }
-        .error-box h2 { color: #dc3545; margin-bottom: 10px; }
+
+        .error-box h2 {
+            color: var(--text);
+            margin-bottom: 10px;
+            font-size: clamp(1.8rem, 3vw, 2.6rem);
+        }
+
+        .error-box p {
+            margin: 0;
+            line-height: 1.6;
+        }
+
+        @media (max-width: 820px) {
+            form {
+                padding: 24px;
+            }
+
+            .two-col {
+                grid-template-columns: 1fr;
+            }
+        }
 
         @media (max-width: 520px) {
             body {
-                padding: 16px 12px;
-                background-attachment: scroll;
+                padding: 14px 10px;
+            }
+
+            form,
+            .error-box {
+                width: 100%;
+                border-radius: 22px;
             }
 
             .logout {
@@ -120,9 +322,17 @@
                 right: 12px;
             }
 
-            form,
-            .error-box {
-                width: 100%;
+            form {
+                padding: 20px;
+            }
+
+            .form-head {
+                margin-bottom: 22px;
+            }
+
+            .upload-box {
+                min-height: 108px;
+                padding: 16px;
             }
         }
     </style>
@@ -136,27 +346,76 @@
         </div>
         {% else %}
         <form id="applicationForm" action="/apply" method="POST" enctype="multipart/form-data">
-            <h2>Job Application Form</h2>
-         <label>Job Id:</label>
-         <input type="text" value="{{ job_id }}" readonly><br><br>
-         <label>Job Title:</label>
-         <input type="text" value="{{ job_title }}" readonly><br><br>
-         <label>Company Name:</label>
-         <input type="text" value="{{ company_name }}" readonly><br><br>
-         <input type="hidden" name="job_id" value="{{ job_id }}">
-         <label> Name*:</label>
-         <input type="text" name="name" pattern="^[a-zA-Z\s]+$" required><br><br>
-         <label>Email*:</label>
-         <input type="email" name="email" required><br><br>
-         <label>Mobile Number*:</label>
-         <input type="text" name="phone" pattern="^\d{10}$" maxlength="10" required><br><br>
-         <label>LinkedIn URL:</label>
-         <input type="url" name="linkedin_url" id="linkedin_url" required placeholder="https://www.linkedin.com/in/your-profile"><br><br>
-         <label>Upload Resume*:</label>
-         <input type = "file" name = "resume" id = "resume" accept = ".pdf,.docx" required><br><br>
-         <label>Upload Cover Letter:</label>
-         <input type = "file" name = "cover_letter" id = "cover_letter" accept = ".pdf,.doc,.docx"><br><br>
-         <input type="submit" value="Submit">
+            <div class="form-shell">
+                <div class="form-head">
+                    <p class="eyebrow">APPLICATION &middot; STEP 01</p>
+                    <h2>Tell us who you are.</h2>
+                </div>
+
+                <div class="form-grid">
+                    <div class="field full">
+                        <label>Job ID:</label>
+                        <input type="text" value="{{ job_id }}" readonly>
+                    </div>
+
+                    <div class="field full">
+                        <label>Job Title:</label>
+                        <input type="text" value="{{ job_title }}" readonly>
+                    </div>
+
+                    <div class="field full">
+                        <label>Company Name:</label>
+                        <input type="text" value="{{ company_name }}" readonly>
+                    </div>
+
+                    <input type="hidden" name="job_id" value="{{ job_id }}">
+
+                    <div class="form-grid two-col">
+                        <div class="field">
+                            <label>Name*:</label>
+                            <input type="text" name="name" pattern="^[a-zA-Z\s]+$" required>
+                        </div>
+                        <div class="field">
+                            <label>Email*:</label>
+                            <input type="email" name="email" required>
+                        </div>
+                    </div>
+
+                    <div class="form-grid two-col">
+                        <div class="field">
+                            <label>Mobile Number*:</label>
+                            <input type="text" name="phone" pattern="^\d{10}$" maxlength="10" required>
+                        </div>
+                        <div class="field">
+                            <label>LinkedIn URL:</label>
+                            <input type="url" name="linkedin_url" id="linkedin_url" required placeholder="https://www.linkedin.com/in/your-profile">
+                        </div>
+                    </div>
+
+                    <div class="form-grid two-col">
+                        <div class="field">
+                            <label>Upload Resume*:</label>
+                            <div class="upload-box">
+                                <span class="upload-title">Resume Upload</span>
+                                <p class="upload-copy">Drag and drop your file here or click to browse. Accepted: PDF, DOCX.</p>
+                                <input type="file" name="resume" id="resume" accept=".pdf,.docx" required>
+                            </div>
+                        </div>
+                        <div class="field">
+                            <label>Upload Cover Letter:</label>
+                            <div class="upload-box">
+                                <span class="upload-title">Cover Letter Upload</span>
+                                <p class="upload-copy">Optional. Add a PDF, DOC, or DOCX file if you'd like.</p>
+                                <input type="file" name="cover_letter" id="cover_letter" accept=".pdf,.doc,.docx">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="actions">
+                        <input type="submit" value="Submit">
+                    </div>
+                </div>
+            </div>
         </form>
         {% endif %}
         <script>
