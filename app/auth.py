@@ -1,5 +1,5 @@
 import os
-from urllib.parse import quote, urlparse
+from urllib.parse import parse_qs, quote, urlparse
 
 import httpx
 from authlib.integrations.starlette_client import OAuth
@@ -85,6 +85,18 @@ def _application_redirect_target(target: str | None) -> str:
     return "/application"
 
 
+def _application_job_id(target: str | None) -> str | None:
+    if not target:
+        return None
+
+    parsed = urlparse(target)
+    if parsed.path.rstrip("/") != "/application":
+        return None
+
+    job_id = parse_qs(parsed.query).get("job_id", [""])[0].strip()
+    return job_id or None
+
+
 def _dashboard_candidate_lookup(email: str) -> dict | None:
     if not DASHBOARD_BASE_URL:
         return None
@@ -158,26 +170,28 @@ async def auth_callback(request: Request):
 
     response_target = next_url or "/application"
     try:
-        from .portal_store import get_candidate, hydrate_candidate_from_dashboard
+        from .portal_store import get_candidate, has_applied_to_job
 
         email = google_user["email"]
         local_candidate = get_candidate(email)
+        job_id = _application_job_id(next_url)
         print("========== LOGIN REDIRECT DEBUG ==========")
         print("Email:", email)
         print("Next URL:", next_url)
+        print("Application Job ID:", job_id)
         print("Local Candidate Found:", bool(local_candidate))
 
         print("=========================================")
 
-        if local_candidate:
-            response_target = "/candidate-dashboard"
-        else:
-            dashboard_response = _dashboard_candidate_lookup(email)
-            print("Dashboard Response Found:", bool(dashboard_response))
-            if dashboard_response is not None and hydrate_candidate_from_dashboard(email, dashboard_response, google_user):
+        if not local_candidate:
+            response_target = _application_redirect_target(next_url)
+        elif job_id:
+            if has_applied_to_job(email, job_id):
                 response_target = "/candidate-dashboard"
             else:
-                response_target = _application_redirect_target(next_url)
+                response_target = f"/application?job_id={job_id}"
+        else:
+            response_target = "/candidate-dashboard"
 
         print("FINAL REDIRECT:", response_target)
 
