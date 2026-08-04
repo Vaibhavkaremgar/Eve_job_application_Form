@@ -2,6 +2,9 @@
 <html>
     <head>
         <title>Job Application Form</title>
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Playfair+Display:wght@500;600;700&display=swap" rel="stylesheet">
         <style>
         :root {
             --bg: #f4ede3;
@@ -31,7 +34,7 @@
             justify-content: center;
             overflow-x: hidden;
             color: var(--text);
-            font-family: "Inter", "Segoe UI", Arial, sans-serif;
+            font-family: "Manrope", "Segoe UI", Arial, sans-serif;
             background:
                 radial-gradient(circle at 12% 14%, rgba(255, 255, 255, 0.72), transparent 30%),
                 radial-gradient(circle at 85% 16%, rgba(215, 187, 155, 0.36), transparent 28%),
@@ -99,12 +102,13 @@
             text-transform: uppercase;
             color: var(--muted);
             font-weight: 600;
+            font-family: "Manrope", "Segoe UI", Arial, sans-serif;
         }
 
         h2 {
             margin: 0;
             color: var(--text);
-            font-family: Georgia, "Times New Roman", serif;
+            font-family: "Playfair Display", Georgia, "Times New Roman", serif;
             font-size: clamp(2.2rem, 4vw, 3.8rem);
             line-height: 1.03;
             font-weight: 500;
@@ -143,6 +147,7 @@
             line-height: 1.35;
             color: var(--muted);
             font-weight: 500;
+            font-family: "Manrope", "Segoe UI", Arial, sans-serif;
         }
 
         input[type="text"],
@@ -156,6 +161,7 @@
             background: var(--field-bg);
             color: var(--text);
             font: inherit;
+            font-family: "Manrope", "Segoe UI", Arial, sans-serif;
             transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease, background 0.18s ease;
         }
 
@@ -204,6 +210,7 @@
             font-size: 0.95rem;
             color: var(--text);
             font-weight: 600;
+            font-family: "Manrope", "Segoe UI", Arial, sans-serif;
         }
 
         .upload-copy {
@@ -211,6 +218,7 @@
             color: var(--muted);
             font-size: 0.88rem;
             line-height: 1.55;
+            font-family: "Manrope", "Segoe UI", Arial, sans-serif;
         }
 
         input[type="file"] {
@@ -234,6 +242,7 @@
             background: var(--button);
             color: #fff;
             font: inherit;
+            font-family: "Manrope", "Segoe UI", Arial, sans-serif;
             font-weight: 600;
             letter-spacing: 0.02em;
             cursor: pointer;
@@ -348,7 +357,7 @@
         <form id="applicationForm" action="/apply" method="POST" enctype="multipart/form-data">
             <div class="form-shell">
                 <div class="form-head">
-                    <p class="eyebrow">APPLICATION &middot; STEP 01</p>
+                    <p class="eyebrow">APPLICATION &middot;</p>
                     <h2>Tell us who you are.</h2>
                 </div>
 
