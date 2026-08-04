@@ -640,6 +640,11 @@ async def apply(
 
     try:
         async with httpx.AsyncClient(timeout=30) as client:
+            print("========== SUBMIT ==========")
+            print("business_job_id:", reference["business_job_id"])
+            print("internal_job_id:", reference["internal_job_id"])
+            print("POST data:", data)
+            print("============================")
             resp = await client.post(
                 f"{DASHBOARD_BASE_URL}/api/public/applications",
                 data=data,
