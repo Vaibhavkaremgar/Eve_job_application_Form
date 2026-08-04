@@ -226,6 +226,9 @@ def _resolve_job_reference(job_id: str) -> dict[str, str] | None:
         if response.status_code != 200:
             continue
 
+        logger.info("Job lookup request URL - source=%s url=%s", lookup_type, response.request.url)
+        logger.info("Job lookup response body - source=%s body=%s", lookup_type, response.text)
+
         try:
             payload = response.json()
         except ValueError:
@@ -234,6 +237,15 @@ def _resolve_job_reference(job_id: str) -> dict[str, str] | None:
 
         for candidate in _job_payload_candidates(payload):
             reference = _extract_job_reference(candidate, job_id)
+            if reference:
+                logger.info(
+                    "Parsed job reference - source=%s business_job_id=%s internal_job_id=%s job_title=%s company_name=%s",
+                    lookup_type,
+                    reference["business_job_id"],
+                    reference["internal_job_id"],
+                    reference["job_title"],
+                    reference["company_name"],
+                )
             if reference and reference["business_job_id"] == job_id:
                 logger.info(
                     "Matching job found - business_job_id=%s internal_job_id=%s job_title=%s company_name=%s",
