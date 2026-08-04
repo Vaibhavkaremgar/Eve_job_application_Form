@@ -179,6 +179,11 @@ def _extract_job_reference(data: dict[str, object], fallback_business_id: str) -
     print("job_title:", data.get("job_title"))
     print("company_name:", data.get("company_name"))
     print("===========================================")
+    print("========== EXTRACT JOB REFERENCE ==========")
+    print("business_job_id:", business_job_id)
+    print("internal_job_id:", internal_job_id)
+    print("data keys:", list(data.keys()))
+    print("===========================================")
 
     return {
         "business_job_id": business_job_id or fallback_business_id,
