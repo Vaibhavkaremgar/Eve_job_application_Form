@@ -245,6 +245,43 @@ def _resolve_job_reference(job_id: str) -> dict[str, str] | None:
         except ValueError:
             logger.warning("Job lookup response was not valid JSON - source=%s job_id=%s", lookup_type, job_id)
             continue
+
+        if isinstance(payload, dict):
+            jobs = payload.get("jobs")
+            if isinstance(jobs, list):
+                for job in jobs:
+                    if not isinstance(job, dict):
+                        continue
+                    matched_job_id = _first_text(job, "job_id", "jobId")
+                    if matched_job_id != job_id:
+                        continue
+
+                    reference = _extract_job_reference(job, job_id)
+                    if reference:
+                        matched_job_uuid = _first_text(job, "job_uuid", "jobUuid")
+                        logger.info(
+                            "Matched job lookup - matched_job_id=%s matched_job_uuid=%s resolved_internal_job_id=%s",
+                            matched_job_id,
+                            matched_job_uuid,
+                            reference["internal_job_id"],
+                        )
+                        logger.info(
+                            "Parsed job reference - source=%s business_job_id=%s internal_job_id=%s job_title=%s company_name=%s",
+                            lookup_type,
+                            reference["business_job_id"],
+                            reference["internal_job_id"],
+                            reference["job_title"],
+                            reference["company_name"],
+                        )
+                        logger.info(
+                            "Matching job found - business_job_id=%s internal_job_id=%s job_title=%s company_name=%s",
+                            reference["business_job_id"],
+                            reference["internal_job_id"],
+                            reference["job_title"],
+                            reference["company_name"],
+                        )
+                        return reference
+
         candidates = _job_payload_candidates(payload)
         print("====================================")
         print("TOTAL CANDIDATES:", len(candidates))
@@ -257,6 +294,12 @@ def _resolve_job_reference(job_id: str) -> dict[str, str] | None:
 
         # for candidate in _job_payload_candidates(payload):
         for candidate in candidates:
+            if candidate is payload:
+                continue
+            if isinstance(candidate, dict) and isinstance(candidate.get("jobs"), list) and not _first_text(
+                candidate, "job_id", "jobId", "job_uuid", "jobUuid", "internal_job_id", "internalJobId", "uuid", "id"
+            ):
+                continue
             print("================================")
             print("CANDIDATE PASSED TO _extract_job_reference")
             print(candidate)
