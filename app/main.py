@@ -197,8 +197,8 @@ def _resolve_job_reference(job_id: str) -> dict[str, str] | None:
     if not job_id:
         return None
 
-    logger.info("Received job_id from URL/form: %s", job_id)
-    logger.info("Job lookup query: Job.job_id = %s", job_id)
+    print("========== JOB LOOKUP ==========")
+    print("Incoming job_id:", job_id)
 
     if not DASHBOARD_BASE_URL:
         logger.warning("DASHBOARD_BASE_URL is not configured; unable to resolve job_id=%s", job_id)
@@ -210,24 +210,22 @@ def _resolve_job_reference(job_id: str) -> dict[str, str] | None:
     ]
 
     for lookup_type, url, params in lookup_attempts:
-        logger.info(
-            "Executing job lookup request - source=%s url=%s params=%s",
-            lookup_type,
-            url,
-            params or {},
-        )
+        print("Lookup Type:", lookup_type)
+        print("Dashboard URL:", url)
+        print("Params:", params)
         try:
             response = httpx.get(url, params=params, timeout=10)
         except httpx.RequestError:
             logger.warning("Could not fetch job details - source=%s job_id=%s", lookup_type, job_id)
             continue
 
-        logger.info("Job lookup response - source=%s status=%s", lookup_type, response.status_code)
+        print("Response Status:", response.status_code)
+        print("Final Request URL:", response.request.url)
         if response.status_code != 200:
             continue
 
-        logger.info("Job lookup request URL - source=%s url=%s", lookup_type, response.request.url)
-        logger.info("Job lookup response body - source=%s body=%s", lookup_type, response.text)
+        print("Response Body:")
+        print(response.text)
 
         try:
             payload = response.json()
@@ -235,28 +233,22 @@ def _resolve_job_reference(job_id: str) -> dict[str, str] | None:
             logger.warning("Job lookup response was not valid JSON - source=%s job_id=%s", lookup_type, job_id)
             continue
 
+        print("Parsed JSON:")
+        print(payload)
+
         for candidate in _job_payload_candidates(payload):
             reference = _extract_job_reference(candidate, job_id)
-            if reference:
-                logger.info(
-                    "Parsed job reference - source=%s business_job_id=%s internal_job_id=%s job_title=%s company_name=%s",
-                    lookup_type,
-                    reference["business_job_id"],
-                    reference["internal_job_id"],
-                    reference["job_title"],
-                    reference["company_name"],
-                )
+            print("Candidate Reference:")
+            print(reference)
             if reference and reference["business_job_id"] == job_id:
-                logger.info(
-                    "Matching job found - business_job_id=%s internal_job_id=%s job_title=%s company_name=%s",
-                    reference["business_job_id"],
-                    reference["internal_job_id"],
-                    reference["job_title"],
-                    reference["company_name"],
-                )
+                print("MATCH FOUND")
+                print("Business Job ID:", reference["business_job_id"])
+                print("Internal Job ID:", reference["internal_job_id"])
+                print("Job Title:", reference["job_title"])
+                print("Company Name:", reference["company_name"])
                 return reference
 
-        logger.info("No matching job found in %s response for job_id=%s", lookup_type, job_id)
+        print("NO MATCH FOUND FOR:", job_id)
 
     logger.warning("No matching job found for job_id=%s", job_id)
     return None
