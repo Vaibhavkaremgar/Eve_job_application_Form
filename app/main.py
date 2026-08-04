@@ -6,7 +6,7 @@ from pathlib import Path
 
 import httpx
 from uuid import UUID
-from fastapi import FastAPI, File, Form, Request, UploadFile
+from fastapi import FastAPI, File, Form, Query, Request, UploadFile
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -33,6 +33,8 @@ from .portal_store import (
     get_profile,
     get_resume,
     list_applications,
+    save_store,
+    with_store,
     upsert_candidate_profile,
 )
 
@@ -433,6 +435,28 @@ def candidate_documents(request: Request):
     if not email:
         return JSONResponse(status_code=401, content={"detail": "Unauthorized"})
     return {"documents": get_documents(email)}
+
+
+@app.delete("/api/candidate-cache")
+def delete_candidate_cache(email: str | None = Query(None)):
+    logger.info("Delete candidate cache request received for email=%s", email)
+    normalized_email = (email or "").lower().strip()
+    store = with_store()
+    candidates = store.setdefault("candidates", {})
+
+    deleted = False
+    if normalized_email and normalized_email in candidates:
+        del candidates[normalized_email]
+        deleted = True
+
+    logger.info(
+        "Delete candidate cache result for email=%s found_and_deleted=%s",
+        normalized_email,
+        deleted,
+    )
+    save_store(store)
+    logger.info("Candidate cache store saved for email=%s", normalized_email)
+    return {"success": True}
 
 
 @app.put("/candidate/profile")
