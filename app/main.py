@@ -709,10 +709,38 @@ async def apply(
                 files=files,
             )
 
-        response_json = resp.json() if resp.content else {}
-        if isinstance(response_json, dict):
-            response_json.setdefault("dashboard_url", "/candidate-dashboard")
+        response_text = resp.text
+        logger.info(
+            "Dashboard response status code - status=%s job_id=%s email=%s",
+            resp.status_code,
+            internal_job_id,
+            email,
+        )
+        logger.info(
+            "Dashboard response body - status=%s job_id=%s email=%s body=%s",
+            resp.status_code,
+            internal_job_id,
+            email,
+            response_text,
+        )
+
+        response_json = None
+        if response_text:
+            try:
+                response_json = resp.json()
+                logger.info(
+                    "Parsed Dashboard JSON response - status=%s job_id=%s email=%s json=%s",
+                    resp.status_code,
+                    internal_job_id,
+                    email,
+                    response_json,
+                )
+            except ValueError:
+                response_json = None
+
         if resp.status_code < 400:
+            if isinstance(response_json, dict):
+                response_json.setdefault("dashboard_url", "/candidate-dashboard")
             try:
                 print("CALLING upsert_candidate_profile")
                 upsert_candidate_profile(
@@ -731,13 +759,21 @@ async def apply(
                 print("upsert_candidate_profile COMPLETED")
             except Exception:
                 logger.exception("Failed to mirror candidate locally for %s", email)
-        logger.info("Dashboard response - status=%s job_id=%s email=%s", resp.status_code, internal_job_id, email)
+            logger.info(
+                "Returning success response to frontend - email=%s status=%s",
+                email,
+                resp.status_code,
+            )
+            return JSONResponse(status_code=resp.status_code, content=response_json if response_json is not None else {})
+
         logger.info(
-    "Returning success response to frontend - email=%s status=%s",
-    email,
-    resp.status_code,
-)
-        return JSONResponse(status_code=resp.status_code, content=response_json)
+            "Returning Dashboard failure response to frontend - email=%s status=%s",
+            email,
+            resp.status_code,
+        )
+        if response_json is not None:
+            return JSONResponse(status_code=resp.status_code, content=response_json)
+        return JSONResponse(status_code=resp.status_code, content={"detail": response_text or resp.reason_phrase})
     except httpx.TimeoutException:
         logger.exception("Dashboard request timed out - job_id=%s email=%s", internal_job_id, email)
         return JSONResponse(status_code=504, content={"detail": "Upstream service timed out."})
