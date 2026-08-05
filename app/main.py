@@ -702,6 +702,10 @@ async def apply(
             print("business_job_id:", reference["business_job_id"])
             print("internal_job_id:", reference["internal_job_id"])
             print("POST data:", data)
+            print("Multipart fields to send:")
+            for index, (field_name, file_info) in enumerate(files, start=1):
+                filename = file_info[0] if isinstance(file_info, tuple) and file_info else None
+                print(f"  {index}. field={field_name!r} filename={filename!r}")
             print("============================")
             resp = await client.post(
                 f"{DASHBOARD_BASE_URL}/api/public/applications",
