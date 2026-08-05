@@ -213,6 +213,20 @@
             line-height: 1.55;
         }
 
+        .selected-files {
+            margin-top: 2px;
+            color: #4d4136;
+            font-size: 0.88rem;
+            line-height: 1.5;
+            white-space: pre-line;
+            overflow-wrap: anywhere;
+            word-break: break-word;
+        }
+
+        .selected-files:empty {
+            display: none;
+        }
+
         input[type="file"] {
             position: absolute;
             inset: 0;
@@ -398,8 +412,9 @@
                             <div class="upload-box">
                                 <span class="upload-title">Resume Upload</span>
                                 <p class="upload-copy">Drop your resume here , or click to browse</p>
-                                <input type="file" name="resume" id="resume" accept=".pdf,.docx" required>
+                                <input type="file" name="resume" id="resume" accept=".pdf,.doc,.docx" required>
                             </div>
+                            <div class="selected-files" id="resumeFileName" aria-live="polite"></div>
                         </div>
                         <div class="field">
                             <label>Upload Cover Letter:</label>
@@ -408,7 +423,18 @@
                                 <p class="upload-copy">Optional. Add a PDF, DOC, or DOCX file if you'd like.</p>
                                 <input type="file" name="cover_letter" id="cover_letter" accept=".pdf,.doc,.docx">
                             </div>
+                            <div class="selected-files" id="coverLetterFileName" aria-live="polite"></div>
                         </div>
+                    </div>
+
+                    <div class="field full">
+                        <label>Upload Certificates (Optional):</label>
+                        <div class="upload-box">
+                            <span class="upload-title">Certificates Upload</span>
+                            <p class="upload-copy">Add one or more supporting certificates in PDF, DOC, or DOCX format.</p>
+                            <input type="file" name="certificates" id="certificates" accept=".pdf,.doc,.docx" multiple>
+                        </div>
+                        <div class="selected-files" id="certificateFileNames" aria-live="polite"></div>
                     </div>
 
                     <div class="actions">
@@ -420,112 +446,161 @@
         {% endif %}
         <script>
 
-const nameField = document.querySelector('input[name="name"]');
-
-nameField.addEventListener("input", function () {
-    this.value = this.value.replace(/[^A-Za-z ]/g, "");
-});
-
-
-const mobile = document.querySelector('input[name="phone"]');
-
-mobile.addEventListener("input", function () {
-    this.value = this.value.replace(/[^0-9]/g, "");
-    if (this.value.length > 10) {
-        this.value = this.value.slice(0, 10);
-    }
-});
-const linkedinInput = document.getElementById("linkedin_url");
-
-function validateLinkedin() {
-    const msg = linkedinInput.value && !linkedinInput.value.startsWith("https://")
-        ? "Please enter a valid LinkedIn profile URL starting with https://"
-        : "";
-    linkedinInput.setCustomValidity(msg);
-}
-
-linkedinInput.addEventListener("input", validateLinkedin);
-linkedinInput.addEventListener("invalid", function () {
-    if (this.value && !this.value.startsWith("https://")) {
-        this.setCustomValidity("Please enter a valid LinkedIn profile URL starting with https://");
-    }
-});
-
 const form = document.getElementById("applicationForm");
+const nameField = document.querySelector('input[name="name"]');
+const mobile = document.querySelector('input[name="phone"]');
+const linkedinInput = document.getElementById("linkedin_url");
+const resumeInput = document.getElementById("resume");
+const coverLetterInput = document.getElementById("cover_letter");
+const certificateInput = document.getElementById("certificates");
+const resumeFileName = document.getElementById("resumeFileName");
+const coverLetterFileName = document.getElementById("coverLetterFileName");
+const certificateFileNames = document.getElementById("certificateFileNames");
 
-form.addEventListener("submit", async function (e) {
-
-    e.preventDefault();
-
-    validateLinkedin();
-    if (!form.checkValidity()) {
-        form.reportValidity();
+function renderFileNames(input, output) {
+    if (!input || !output) {
         return;
     }
-    
- 
-    const formData = new FormData(form);
+    const files = Array.from(input.files || []);
+    output.textContent = files.length ? files.map((file) => file.name).join("\n") : "";
+}
 
-    try {
-        console.log("Submitting application...");
-        const response = await fetch("/apply", {
-            method: "POST",
-            body: formData
-        });
-        console.log("Response Status:", response.status);
+function syncUploadPreviews() {
+    renderFileNames(resumeInput, resumeFileName);
+    renderFileNames(coverLetterInput, coverLetterFileName);
+    renderFileNames(certificateInput, certificateFileNames);
+}
 
-        const result = await response.json();
-        console.log("Response Body:", result);
+if (nameField) {
+    nameField.addEventListener("input", function () {
+        this.value = this.value.replace(/[^A-Za-z ]/g, "");
+    });
+}
 
-        if (response.ok) {
-            console.log("Application submitted successfully.");
-            if (!window.__applicationSuccessToast) {
-                const toast = document.createElement("div");
-                toast.id = "applicationSuccessToast";
-                toast.style.position = "fixed";
-                toast.style.left = "50%";
-                toast.style.bottom = "24px";
-                toast.style.transform = "translateX(-50%)";
-                toast.style.background = "#16a34a";
-                toast.style.color = "#fff";
-                toast.style.padding = "14px 18px";
-                toast.style.borderRadius = "10px";
-                toast.style.boxShadow = "0 12px 28px rgba(0, 0, 0, 0.18)";
-                toast.style.fontFamily = "Arial, sans-serif";
-                toast.style.fontSize = "14px";
-                toast.style.lineHeight = "1.5";
-                toast.style.zIndex = "9999";
-                toast.style.maxWidth = "min(92vw, 520px)";
-                toast.style.textAlign = "center";
-                toast.style.opacity = "0";
-                toast.style.transition = "opacity 0.2s ease";
-                toast.textContent = "Thank you! Your application has been received successfully. If you're shortlisted, we'll contact you with the next steps.";
-                document.body.appendChild(toast);
-                window.__applicationSuccessToast = toast;
-            }
-
-            window.__applicationSuccessToast.textContent = "Thank you! Your application has been received successfully. If you're shortlisted, we'll contact you with the next steps.";
-            window.__applicationSuccessToast.style.opacity = "1";
-            window.clearTimeout(window.__applicationSuccessToastTimer);
-            window.__applicationSuccessToastTimer = window.setTimeout(() => {
-                if (window.__applicationSuccessToast) {
-                    window.__applicationSuccessToast.style.opacity = "0";
-                }
-            }, 1800);
-            window.clearTimeout(window.__applicationRedirectTimer);
-            window.__applicationRedirectTimer = window.setTimeout(() => {
-                console.log("Redirecting to Candidate Dashboard...");
-                window.location.href = "/candidate-dashboard";
-            }, 2000);
-            form.reset();
-        } else {
-            alert(result.detail || result.message || "Application submission failed.");
+if (mobile) {
+    mobile.addEventListener("input", function () {
+        this.value = this.value.replace(/[^0-9]/g, "");
+        if (this.value.length > 10) {
+            this.value = this.value.slice(0, 10);
         }
-    } catch {
-        alert("Application submission failed.");
+    });
+}
+
+if (linkedinInput) {
+    function validateLinkedin() {
+        const msg = linkedinInput.value && !linkedinInput.value.startsWith("https://")
+            ? "Please enter a valid LinkedIn profile URL starting with https://"
+            : "";
+        linkedinInput.setCustomValidity(msg);
     }
 
-});
+    linkedinInput.addEventListener("input", validateLinkedin);
+    linkedinInput.addEventListener("invalid", function () {
+        if (this.value && !this.value.startsWith("https://")) {
+            this.setCustomValidity("Please enter a valid LinkedIn profile URL starting with https://");
+        }
+    });
+}
+
+if (resumeInput) {
+    resumeInput.addEventListener("change", () => renderFileNames(resumeInput, resumeFileName));
+}
+
+if (coverLetterInput) {
+    coverLetterInput.addEventListener("change", () => renderFileNames(coverLetterInput, coverLetterFileName));
+}
+
+if (certificateInput) {
+    certificateInput.addEventListener("change", () => renderFileNames(certificateInput, certificateFileNames));
+}
+
+if (form) {
+    form.addEventListener("reset", () => {
+        window.setTimeout(syncUploadPreviews, 0);
+    });
+
+    form.addEventListener("submit", async function (e) {
+
+        e.preventDefault();
+
+        if (linkedinInput) {
+            linkedinInput.setCustomValidity("");
+            const msg = linkedinInput.value && !linkedinInput.value.startsWith("https://")
+                ? "Please enter a valid LinkedIn profile URL starting with https://"
+                : "";
+            linkedinInput.setCustomValidity(msg);
+        }
+        if (!form.checkValidity()) {
+            form.reportValidity();
+            return;
+        }
+        
+ 
+        const formData = new FormData(form);
+
+        try {
+            console.log("Submitting application...");
+            const response = await fetch("/apply", {
+                method: "POST",
+                body: formData
+            });
+            console.log("Response Status:", response.status);
+
+            const result = await response.json();
+            console.log("Response Body:", result);
+
+            if (response.ok) {
+                console.log("Application submitted successfully.");
+                if (!window.__applicationSuccessToast) {
+                    const toast = document.createElement("div");
+                    toast.id = "applicationSuccessToast";
+                    toast.style.position = "fixed";
+                    toast.style.left = "50%";
+                    toast.style.bottom = "24px";
+                    toast.style.transform = "translateX(-50%)";
+                    toast.style.background = "#16a34a";
+                    toast.style.color = "#fff";
+                    toast.style.padding = "14px 18px";
+                    toast.style.borderRadius = "10px";
+                    toast.style.boxShadow = "0 12px 28px rgba(0, 0, 0, 0.18)";
+                    toast.style.fontFamily = "Arial, sans-serif";
+                    toast.style.fontSize = "14px";
+                    toast.style.lineHeight = "1.5";
+                    toast.style.zIndex = "9999";
+                    toast.style.maxWidth = "min(92vw, 520px)";
+                    toast.style.textAlign = "center";
+                    toast.style.opacity = "0";
+                    toast.style.transition = "opacity 0.2s ease";
+                    toast.textContent = "Thank you! Your application has been received successfully. If you're shortlisted, we'll contact you with the next steps.";
+                    document.body.appendChild(toast);
+                    window.__applicationSuccessToast = toast;
+                }
+
+                window.__applicationSuccessToast.textContent = "Thank you! Your application has been received successfully. If you're shortlisted, we'll contact you with the next steps.";
+                window.__applicationSuccessToast.style.opacity = "1";
+                window.clearTimeout(window.__applicationSuccessToastTimer);
+                window.__applicationSuccessToastTimer = window.setTimeout(() => {
+                    if (window.__applicationSuccessToast) {
+                        window.__applicationSuccessToast.style.opacity = "0";
+                    }
+                }, 1800);
+                window.clearTimeout(window.__applicationRedirectTimer);
+                window.__applicationRedirectTimer = window.setTimeout(() => {
+                    console.log("Redirecting to Candidate Dashboard...");
+                    window.location.href = "/candidate-dashboard";
+                }, 2000);
+                form.reset();
+                syncUploadPreviews();
+            } else {
+                alert(result.detail || result.message || "Application submission failed.");
+            }
+        } catch {
+            alert("Application submission failed.");
+        }
+
+    });
+    syncUploadPreviews();
+}
 </script>
     </body>
 </html>

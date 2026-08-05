@@ -623,6 +623,7 @@ async def apply(
     linkedin_url: str = Form(None),
     resume: UploadFile = File(...),
     cover_letter: UploadFile = File(None),
+    certificates: list[UploadFile] | None = File(None),
 ):
     if not _require_email(request):
         return JSONResponse(status_code=401, content={"detail": "Unauthorized"})
@@ -647,8 +648,19 @@ async def apply(
     if cover_letter and cover_letter.filename and not _allowed(cover_letter.filename):
         return JSONResponse(status_code=400, content={"detail": "Cover letter must be a PDF, DOC, or DOCX file."})
 
+    certificate_files = [file for file in (certificates or []) if file and file.filename]
+    logger.info("Certificate files received - count=%s", len(certificate_files))
+    for index, certificate in enumerate(certificate_files, start=1):
+        logger.info("Certificate file received - index=%s filename=%s", index, certificate.filename)
+        if not _allowed(certificate.filename):
+            return JSONResponse(status_code=400, content={"detail": "Each certificate must be a PDF, DOC, or DOCX file."})
+
     resume_bytes = await resume.read()
     cover_letter_bytes = await cover_letter.read() if cover_letter and cover_letter.filename else None
+    certificate_payloads = [
+        (certificate.filename, await certificate.read(), certificate.content_type)
+        for certificate in certificate_files
+    ]
 
     try:
         async with httpx.AsyncClient(timeout=10) as client:
@@ -673,9 +685,12 @@ async def apply(
 
     logger.info("Forwarding application to Dashboard - job_id=%s email=%s name=%s", internal_job_id, email, name)
 
-    files = {"resume": (resume.filename, resume_bytes, resume.content_type)}
+    files: list[tuple[str, tuple[str, bytes, str | None]]] = [("resume", (resume.filename, resume_bytes, resume.content_type))]
     if cover_letter and cover_letter.filename and cover_letter_bytes is not None:
-        files["cover_letter"] = (cover_letter.filename, cover_letter_bytes, cover_letter.content_type)
+        files.append(("cover_letter", (cover_letter.filename, cover_letter_bytes, cover_letter.content_type)))
+    for certificate in certificate_payloads:
+        files.append(("certificates", certificate))
+    logger.info("Certificate files forwarded to Dashboard - count=%s", len(certificate_payloads))
 
     data = {"job_id": internal_job_id, "name": name, "email": email, "phone": phone}
     if linkedin_url:
