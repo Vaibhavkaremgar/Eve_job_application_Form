@@ -708,6 +708,8 @@ async def apply(
                 data=data,
                 files=files,
             )
+            print("Dashboard Status:", resp.status_code)
+            print("Dashboard Response:", resp.text)
 
         response_text = resp.text
         logger.info(
